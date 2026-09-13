@@ -138,18 +138,16 @@
     <main id="main">
       <!-- ------------------------------------------------ make it yours -->
       <section class="section" id="yours">
-        <div class="section__head">
-          <h2>Make it yours</h2>
-          <p>
-            Pick any background colour and the text colour is worked out for
-            you, so the break screen is always readable. Add your own lines and
-            they show up instead of the default heading. Both controls below
-            drive the real preview.
-          </p>
-        </div>
-
         <div class="playground">
           <div class="playground__controls">
+            <h2 class="playground__title">Make it yours</h2>
+            <p class="playground__lede">
+              Pick any background colour and the text colour is worked out for
+              you, so the break screen is always readable. Add your own lines
+              and they show up instead of the default heading. Both controls
+              drive the real preview.
+            </p>
+
             <div class="field">
               <label class="field__label" for="colour">Break background</label>
               <div class="field__row">
@@ -355,17 +353,18 @@
 
       <!-- ------------------------------------------------------- get it -->
       <section class="section" id="get-it">
-        <div class="section__head">
+        <div class="section__head section__head--tight">
           <h2>Get it</h2>
-          <p class="notice">
-            <strong>There are no packaged releases yet.</strong> For now you
-            build it yourself — it takes one command once the toolchain is set
-            up.
-          </p>
         </div>
 
         <div class="get">
           <div class="get__build">
+            <p class="notice">
+              <strong>There are no packaged releases yet.</strong> For now you
+              build it yourself — it takes one command once the toolchain is
+              set up.
+            </p>
+
             <pre><code>git clone https://github.com/shivpsingh/screenbreak.git
 cd screenbreak
 pnpm install
@@ -378,11 +377,6 @@ pnpm tauri build</code></pre>
                 >development guide</a
               >
               has the details.
-            </p>
-
-            <p class="get__warning">
-              Currently the builds are unsigned, so macOS and Windows will warn
-              you the first time. On macOS, right-click the app and choose Open.
             </p>
           </div>
 
@@ -400,8 +394,12 @@ pnpm tauri build</code></pre>
               <span class="platform__note">.deb, .rpm, AppImage</span>
             </li>
           </ul>
-        </div>
 
+          <p class="get__warning">
+            Currently the builds are unsigned, so macOS and Windows will warn
+            you the first time. On macOS, right-click the app and choose Open.
+          </p>
+        </div>
       </section>
     </main>
 

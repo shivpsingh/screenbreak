@@ -33,6 +33,7 @@
   --text: #f2f2f4;
   --text-muted: #a2a2ae;
   --accent: #8da2f0;
+  --accent-hover: #adbcf6;
   --accent-ink: #14141a;
 
   --radius: 10px;
@@ -68,6 +69,7 @@
   --text: #17171b;
   --text-muted: #55555f;
   --accent: #3550c8;
+  --accent-hover: #2a41a6;
   --accent-ink: #ffffff;
 
   --code-bg: #f6f6f9;
@@ -253,6 +255,11 @@ code {
   stroke: none;
 }
 
+/* Nothing of the site should sit on top of the break screen. */
+body.demo-active .theme-toggle {
+  display: none;
+}
+
 /* Show the mode you would switch to, not the one you are in. */
 :root:not([data-theme="light"]) .theme-toggle__moon,
 :root[data-theme="light"] .theme-toggle__sun {
@@ -289,8 +296,14 @@ code {
   font-weight: 600;
 }
 
+/*
+ * An explicit background rather than `filter: brightness()`. A filter applies
+ * to the element *and its text*, so it lifted the near-black label toward grey
+ * at the same time as brightening the fill, and the label became unreadable.
+ */
 .button--primary:hover:not(:disabled) {
-  filter: brightness(1.1);
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 .button:disabled {
@@ -340,11 +353,16 @@ code {
 
 /* ------------------------------------------------------------ playground */
 
+/*
+ * The heading and blurb live in the left column with the controls, so the
+ * preview can stand alongside the whole section instead of sitting below a
+ * full-width header with a band of empty space either side of it.
+ */
 .playground {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(0, 1.45fr);
-  gap: 40px;
-  align-items: start;
+  grid-template-columns: minmax(300px, 1fr) minmax(0, 1.3fr);
+  gap: 48px;
+  align-items: center;
   max-width: var(--page);
   margin: 0 auto;
 }
@@ -352,7 +370,16 @@ code {
 .playground__controls {
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 24px;
+}
+
+.playground__title {
+  font-size: clamp(28px, 3.6vw, 42px);
+}
+
+.playground__lede {
+  margin-top: -8px;
+  color: var(--text-muted);
 }
 
 .field {
@@ -709,10 +736,15 @@ pre {
 .get {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(220px, 1fr);
-  gap: 36px;
+  gap: 36px 40px;
+  /* Cards line up with the top of the notice beside them. */
   align-items: start;
   max-width: var(--page);
-  margin: 0 auto 24px;
+  margin: 0 auto;
+}
+
+.section__head--tight {
+  margin-bottom: 28px;
 }
 
 .get__build pre {
@@ -723,14 +755,13 @@ pre {
   margin-top: 12px;
 }
 
+/* Spans both columns as a closing footnote, set small: information, not a
+   warning that needs its own box. */
 .get__warning {
-  margin-top: 18px;
-  padding: 12px 16px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface);
+  /* Spans the full row, under both columns. */
+  grid-column: 1 / -1;
   color: var(--text-muted);
-  font-size: 15px;
+  font-size: 13.5px;
 }
 
 .platforms {
@@ -797,6 +828,10 @@ pre {
   .playground,
   .get {
     grid-template-columns: 1fr;
+  }
+
+  .playground {
+    gap: 28px;
   }
 
   .shot,

@@ -168,6 +168,7 @@
     overlay.hidden = true;
     overlay.setAttribute("aria-hidden", "true");
     document.body.style.overflow = "";
+    document.body.classList.remove("demo-active");
     document.removeEventListener("keydown", onBreakKey, true);
     overlay.removeEventListener("click", closeBreak);
 
@@ -190,6 +191,8 @@
     overlay.hidden = false;
     overlay.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
+    // Hides the theme toggle, which would otherwise float over the break.
+    document.body.classList.add("demo-active");
     overlay.setAttribute("tabindex", "-1");
     overlay.focus();
 
