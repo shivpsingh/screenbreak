@@ -1,0 +1,33 @@
+[package]
+name = "screen-break"
+version = "0.1.0"
+description = "A local-first reminder to look away from your screen"
+authors = ["Screen Break contributors"]
+edition = "2021"
+
+[lib]
+# The `_lib` suffix keeps the library name distinct from the binary name, which
+# would otherwise collide on Windows.
+# See https://github.com/rust-lang/cargo/issues/8519
+name = "screen_break_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# `tray-icon` and `image-png` are the only non-default features enabled; they
+# are what allow a menu-bar icon built from the bundled PNG. No plugins are
+# used: settings are read and written by this crate with `std::fs`, so there is
+# no filesystem, shell or HTTP capability anywhere in the app.
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

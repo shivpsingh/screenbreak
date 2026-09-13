@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Merged into the generated Info.plist by tauri-bundler on macOS builds.
+
+  LSUIElement makes Screen Break a menu-bar accessory: no Dock icon and no
+  Cmd-Tab entry, which is what a background utility should look like and what
+  makes "closing the settings window does not quit" feel intentional. The app
+  temporarily switches to a regular activation policy at runtime while the
+  settings window is on screen so that the window can take keyboard focus.
+-->
+<plist version="1.0">
+  <dict>
+    <key>LSUIElement</key>
+    <true/>
+  </dict>
+</plist>
