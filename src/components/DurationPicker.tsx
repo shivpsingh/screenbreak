@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 
 import type { ValidationResult } from "../lib/validation";
 
@@ -48,20 +48,20 @@ export function DurationPicker({
   const matchedPreset = presets.find((preset) => preset * unitSeconds === valueSeconds);
   const isCustom = matchedPreset === undefined;
 
-  // `null` means the custom field is not open. It holds raw text rather than a
-  // number so that a half-typed or invalid entry is preserved while the user
-  // corrects it.
+  // `null` means the user has not typed in the custom field. It holds raw text
+  // rather than a number so that a half-typed or invalid entry is preserved
+  // while the user corrects it.
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const customRef = useRef<HTMLInputElement>(null);
 
-  // Reopen the custom field when the stored value stops matching a preset,
-  // which happens after loading settings that were customised previously. The
-  // stored value is shown, not the prefill — otherwise a saved 25-minute
-  // interval would come back displaying 90.
-  useEffect(() => {
-    if (isCustom) setDraft((current) => current ?? String(valueSeconds / unitSeconds));
-  }, [isCustom, valueSeconds, unitSeconds]);
+  // A stored value that matches no preset must show itself in the custom field,
+  // which happens after loading settings that were customised previously. This
+  // is derived during render rather than synced by an effect: an effect leaves
+  // one commit where the field does not exist yet, which flickers on load and
+  // makes the open state racy to observe. The stored value is shown, not the
+  // prefill, so a saved 25-minute interval comes back as 25 rather than 90.
+  const shownDraft = draft ?? (isCustom ? String(valueSeconds / unitSeconds) : null);
 
   const commit = (raw: string) => {
     const result = validate(raw);
@@ -73,17 +73,30 @@ export function DurationPicker({
     }
   };
 
+  // Set when the field is opened by clicking Custom, so the prefill is selected
+  // exactly once — not every time the field happens to re-render.
+  const openedByClick = useRef(false);
+
   const openCustom = () => {
     const prefill = String(customPrefill);
     setDraft(prefill);
+    openedByClick.current = true;
     // Applied straight away, like clicking a preset does, so the field never
     // shows a value that is not actually the current setting.
     commit(prefill);
-    // Selected rather than merely focused, so typing replaces the prefill.
-    requestAnimationFrame(() => customRef.current?.select());
   };
 
-  const customSelected = draft !== null;
+  const customSelected = shownDraft !== null;
+
+  // Selects the prefill so typing replaces it rather than appending. Done in a
+  // layout effect, which runs synchronously on the commit that mounts the
+  // input: deferring it to a rAF let the selection land *after* the user had
+  // started typing, which silently swallowed a keystroke.
+  useLayoutEffect(() => {
+    if (!customSelected || !openedByClick.current) return;
+    openedByClick.current = false;
+    customRef.current?.select();
+  }, [customSelected]);
 
   return (
     <fieldset className="picker">
@@ -136,7 +149,7 @@ export function DurationPicker({
               // inline with the chips while staying fully described to a
               // screen reader.
               aria-label={`Custom (${unitLabel})`}
-              value={draft ?? ""}
+              value={shownDraft ?? ""}
               aria-invalid={error !== null}
               aria-describedby={error ? errorId : undefined}
               onChange={(event) => {

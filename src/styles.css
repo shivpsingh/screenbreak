@@ -513,7 +513,9 @@ body {
 .theme {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  /* Top-aligned so the two labels sit on the same line; the controls below
+     them share a height, so their bottoms line up as well. */
+  align-items: flex-start;
   gap: 16px;
 }
 
@@ -524,28 +526,31 @@ body {
 }
 
 .theme__label {
+  /* A fixed line box keeps a one-word and a two-word label the same height. */
+  line-height: 16px;
   color: var(--text-muted);
   font-size: 12px;
 }
 
-.theme__select {
-  padding: 7px 8px;
+/* One height for both controls, so the select and the swatch match. */
+.theme__select,
+.theme__color {
+  height: 36px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   background: var(--surface);
+  cursor: pointer;
+}
+
+.theme__select {
+  padding: 0 8px;
   color: var(--text);
   font: inherit;
-  cursor: pointer;
 }
 
 .theme__color {
   width: 56px;
-  height: 34px;
-  padding: 2px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  background: var(--surface);
-  cursor: pointer;
+  padding: 3px;
 }
 
 /* A miniature of the break screen, so the derived text colour is visible

@@ -5,7 +5,6 @@ import { TimerStatus } from "../components/TimerStatus";
 import { Toggle } from "../components/Toggle";
 import { useTimerState } from "../hooks/useTimerState";
 import { formatDuration } from "../lib/timer";
-import { fontStackFor } from "../lib/theme";
 import { validateBreakDurationSeconds, validateIntervalMinutes } from "../lib/validation";
 import {
   BREAK_DURATION_PRESETS_SECONDS,
@@ -23,12 +22,9 @@ export function SettingsPage() {
     return <main className="app app--loading" aria-busy="true" />;
   }
 
-  // The chosen font applies to the settings window too, not just the break.
-  const fontStyle = { fontFamily: fontStackFor(settings.fontChoice) };
-
   if (timer.isFirstRun) {
     return (
-      <main className="app app--welcome" style={fontStyle}>
+      <main className="app app--welcome">
         <h1 className="app__title">Screen Break</h1>
         <p className="app__tagline">Take regular breaks to rest your eyes.</p>
         <p className="welcome__summary">
@@ -53,12 +49,7 @@ export function SettingsPage() {
   }
 
   return (
-    <main className="app" style={fontStyle}>
-      <header className="app__header">
-        <h1 className="app__title">Screen Break</h1>
-        <p className="app__tagline">Take regular breaks to rest your eyes.</p>
-      </header>
-
+    <main className="app">
       <DurationPicker
         legend="Break interval"
         presets={INTERVAL_PRESETS_MINUTES}

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -20,8 +20,10 @@ vi.mock("@tauri-apps/api/event", () => ({
 async function renderPage(bootstrap: Bootstrap = defaultBootstrap) {
   backend = createMockBackend(bootstrap);
   render(<SettingsPage />);
-  // Wait out the bootstrap round trip so tests never assert on the loading frame.
-  await waitFor(() => expect(screen.getByRole("heading")).toBeInTheDocument());
+  // Wait out the bootstrap round trip so tests never assert on the loading
+  // frame. Keyed on aria-busy rather than any particular text, since the
+  // first-run view and the settings view share nothing.
+  await waitFor(() => expect(document.querySelector("[aria-busy]")).toBeNull());
   return backend;
 }
 
@@ -216,7 +218,7 @@ describe("timer status", () => {
   it("follows a snapshot pushed by the backend, such as a break started from the tray", async () => {
     await renderPage();
 
-    backend.emit({ state: "BREAK_ACTIVE", breakEndsAt: Date.now() + 30_000 });
+    act(() => backend.emit({ state: "BREAK_ACTIVE", breakEndsAt: Date.now() + 30_000 }));
 
     expect(await screen.findByText("Break active")).toBeInTheDocument();
   });
@@ -283,7 +285,8 @@ describe("error handling", () => {
     backend.failCommand("get_bootstrap", "backend unavailable");
     render(<SettingsPage />);
 
-    expect(await screen.findByRole("heading", { name: "Screen Break" })).toBeInTheDocument();
+    // Falls back to defaults rather than showing nothing at all.
+    expect(await screen.findByText("Break interval")).toBeInTheDocument();
     expect(await screen.findByRole("alert")).toHaveTextContent("backend unavailable");
   });
 });
@@ -376,5 +379,39 @@ describe("appearance", () => {
     expect(preview).toHaveStyle({ color: "#101014" });
     // The guarantee is also stated numerically.
     expect(screen.getByText(/contrast \d+\.\d:1/)).toBeInTheDocument();
+  });
+});
+describe("settings window chrome", () => {
+  it("does not repeat the app name or a tagline", async () => {
+    // The window is the app; it does not need to introduce itself.
+    await renderPage();
+
+    expect(screen.queryByText("Screen Break")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Take regular breaks to rest your eyes."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the platform font regardless of the chosen break font", async () => {
+    // The font setting styles the break screen only; the settings window should
+    // look like the rest of the OS.
+    await renderPage({
+      ...defaultBootstrap,
+      settings: { ...DEFAULT_SETTINGS, fontChoice: "serif" },
+    });
+
+    const root = screen.getByText("Break interval").closest("main")!;
+    expect(root.style.fontFamily).toBe("");
+  });
+
+  it("still previews the chosen font, since that is the point of the preview", async () => {
+    await renderPage({
+      ...defaultBootstrap,
+      settings: { ...DEFAULT_SETTINGS, fontChoice: "serif" },
+    });
+
+    expect(screen.getByText("Take a break")).toHaveStyle({
+      fontFamily: 'Georgia, "Times New Roman", "Noto Serif", serif',
+    });
   });
 });

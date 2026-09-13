@@ -277,8 +277,10 @@ apps.
 
 ## Windows and monitors
 
-**Settings window** — normal resizable desktop window, 420×620, minimum
-380×560, centred on first launch.
+**Settings window** — normal resizable desktop window, 520×770, minimum
+470×480, centred on first launch. It always uses the platform UI font; the
+font setting applies to the break screen only, so the window looks native
+alongside other apps.
 
 **Break window** — borderless, no title bar, no close button, always-on-top, 
 hidden from the taskbar and app switcher, and visible on all macOS Spaces.
@@ -500,7 +502,7 @@ automated. It was verified manually — see below.
 Observed with `CGWindowListCopyWindowInfo` for geometry, `screencapture` for
 pixels, and the accessibility API to drive the UI.
 
-- Settings window opens centred at 520×820, in both the dev build and the
+- Settings window opens centred at 520×770, in both the dev build and the
   packaged `.app`. Every section fits with nothing clipped.
 - With a seeded 60s/10s config, the break window appeared **60 s** after launch,
   covering the full display at window layer 5 (above normal windows at layer 0).

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -74,7 +74,7 @@ describe("break screen", () => {
   it("follows the deadline pushed by the backend rather than its own clock", async () => {
     await renderBreak(activeBreak());
 
-    backend.emit({ state: "BREAK_ACTIVE", breakEndsAt: Date.now() + 5_000 });
+    act(() => backend.emit({ state: "BREAK_ACTIVE", breakEndsAt: Date.now() + 5_000 }));
 
     await waitFor(() => expect(screen.getByRole("timer")).toHaveTextContent(/^00:0[45]$/));
   });
