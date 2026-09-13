@@ -39,6 +39,9 @@
   --measure: 62ch;
   --page: 1120px;
 
+  --code-bg: #0a0a0e;
+  --glow: rgba(141, 162, 240, 0.1);
+
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --font-display: "Ubuntu Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
@@ -46,6 +49,29 @@
   --break-bg: #101014;
   --break-fg: #f4f4f6;
   --break-fg-muted: #a8a8b2;
+}
+
+/*
+ * Light theme. Dark is the default — absence of the attribute — so nothing
+ * here runs unless the visitor opts in, and the choice is remembered.
+ *
+ * The --break-* values are deliberately NOT overridden: the break screen's
+ * colour is the app's own setting, controlled by the picker further down the
+ * page, and it should look the same whichever theme the site is wearing.
+ */
+:root[data-theme="light"] {
+  --bg: #fbfbfc;
+  --bg-alt: #f2f2f5;
+  --surface: #ffffff;
+  --border: #e2e2e8;
+  --border-strong: #bdbdc7;
+  --text: #17171b;
+  --text-muted: #55555f;
+  --accent: #3550c8;
+  --accent-ink: #ffffff;
+
+  --code-bg: #f6f6f9;
+  --glow: rgba(53, 80, 200, 0.08);
 }
 
 * {
@@ -144,7 +170,7 @@ code {
   padding: 64px 24px;
   /* A faint focal glow, echoing "something in the distance". */
   background:
-    radial-gradient(closest-side at 72% 32%, rgba(141, 162, 240, 0.1), transparent),
+    radial-gradient(closest-side at 72% 32%, var(--glow), transparent),
     var(--bg);
 }
 
@@ -180,31 +206,57 @@ code {
   font-size: 14px;
 }
 
-/* The countdown that telegraphs the takeover. */
-.ticker {
+/* -------------------------------------------------------- theme toggle */
+
+.sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.theme-toggle {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 95;
   display: inline-flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-top: 34px;
-  padding: 12px 18px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 11px;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background: rgba(23, 23, 30, 0.7);
-}
-
-.ticker__label {
-  color: var(--text-muted);
+  /* Semi-transparent so it sits over content without a hard edge. */
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  backdrop-filter: blur(8px);
+  color: var(--text);
+  font: inherit;
   font-size: 14px;
+  cursor: pointer;
+  transition: border-color 140ms ease;
 }
 
-.ticker__value {
-  font-family: var(--font-display);
-  font-size: 26px;
-  font-variant-numeric: tabular-nums;
+.theme-toggle:hover {
+  border-color: var(--text-muted);
 }
 
-.ticker[data-state="done"] .ticker__value {
-  color: var(--text-muted);
+.theme-toggle__icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+}
+
+.theme-toggle__moon {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* Show the mode you would switch to, not the one you are in. */
+:root:not([data-theme="light"]) .theme-toggle__moon,
+:root[data-theme="light"] .theme-toggle__sun {
+  display: none;
 }
 
 /* ---------------------------------------------------------------- buttons */
@@ -237,9 +289,18 @@ code {
   font-weight: 600;
 }
 
-.button--primary:hover {
-  background: #a3b4f4;
-  border-color: #a3b4f4;
+.button--primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.button:disabled {
+  cursor: default;
+}
+
+/* Holds its width while the pre-roll counts down, so the row does not jitter. */
+#demo {
+  min-width: 148px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* --------------------------------------------------------------- sections */
@@ -537,20 +598,44 @@ code {
 
 /* ------------------------------------------------------------ screenshots */
 
+/*
+ * One aligned row per screenshot, image beside its caption. A wrapping grid
+ * looked ragged here because the break screens are very wide and the window
+ * shots are tall, so nothing lined up.
+ */
 .shots {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
   max-width: var(--page);
   margin: 0 auto;
 }
 
 .shot {
+  display: grid;
+  /* Fixed caption column, so captions are the same width down the whole page. */
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 40px;
+  align-items: center;
   margin: 0;
 }
 
-.shot--wide {
-  grid-column: span 2;
+/*
+ * Alternate the sides: image / text, then text / image. The DOM keeps its
+ * natural order — image first, then its caption — and only the grid placement
+ * flips, so a screen reader still reads each caption straight after the image
+ * it describes.
+ */
+.shot:nth-child(even) {
+  grid-template-columns: 300px minmax(0, 1fr);
+}
+
+.shot:nth-child(even) img {
+  grid-area: 1 / 2;
+}
+
+.shot:nth-child(even) figcaption {
+  grid-area: 1 / 1;
 }
 
 .shot img {
@@ -563,9 +648,19 @@ code {
 }
 
 .shot figcaption {
-  margin-top: 12px;
-  color: var(--text-muted);
-  font-size: 14.5px;
+  color: var(--text);
+  font-size: 19px;
+  line-height: 1.5;
+}
+
+/*
+ * The tall window screenshots are a fraction of the width of the break
+ * screens, so they are capped — but they stay flush with the start of their
+ * column rather than being nudged toward the caption, so every image down the
+ * page shares one left edge and every caption shares another.
+ */
+.shot--tall img {
+  max-width: 440px;
 }
 
 /* ------------------------------------------------------------------ proof */
@@ -604,7 +699,7 @@ pre {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #0a0a0e;
+  background: var(--code-bg);
   font-size: 14.5px;
   line-height: 1.6;
 }
@@ -626,6 +721,16 @@ pre {
 
 .get__build .field__hint {
   margin-top: 12px;
+}
+
+.get__warning {
+  margin-top: 18px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 15px;
 }
 
 .platforms {
@@ -694,8 +799,19 @@ pre {
     grid-template-columns: 1fr;
   }
 
-  .shot--wide {
-    grid-column: auto;
+  .shot,
+  .shot:nth-child(even) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .shot:nth-child(even) img,
+  .shot:nth-child(even) figcaption {
+    grid-area: auto;
+  }
+
+  .shot--tall img {
+    max-width: none;
   }
 
   .section {

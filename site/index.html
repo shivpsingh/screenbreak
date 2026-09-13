@@ -21,10 +21,62 @@
 
     <link rel="icon" href="logo.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
+
+    <script>
+      // Applied before first paint, so a light-theme visitor never sees a
+      // flash of dark. Absence of the attribute means dark, which is default.
+      (function () {
+        try {
+          var saved = localStorage.getItem("screen-break:theme");
+          if (saved === "light") document.documentElement.dataset.theme = "light";
+        } catch (e) {
+          /* Storage can be blocked; dark is a fine fallback. */
+        }
+      })();
+    </script>
   </head>
 
   <body>
     <a class="skip" href="#main">Skip to content</a>
+
+    <!--
+      Defined once and referenced with <use> below. Inline rather than an
+      <img>, because `currentColor` cannot resolve inside an <img> — the SVG
+      would be its own document and fall back to black.
+    -->
+    <svg class="sprite" aria-hidden="true" focusable="false">
+      <symbol
+        id="logo-mark"
+        viewBox="0 0 32 32"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.1"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M18 5H6a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-5" />
+        <circle cx="26.5" cy="6.5" r="2.6" fill="currentColor" stroke="none" />
+      </symbol>
+    </svg>
+
+    <!-- 2. Theme toggle. Shows the mode you would switch to. -->
+    <button
+      type="button"
+      class="theme-toggle"
+      id="theme-toggle"
+      aria-label="Switch to light theme"
+    >
+      <svg class="theme-toggle__icon theme-toggle__sun" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.6" />
+        <g stroke-linecap="round">
+          <path d="M12 2.2v2.4M12 19.4v2.4M2.2 12h2.4M19.4 12h2.4M5 5l1.7 1.7M17.3 17.3 19 19M19 5l-1.7 1.7M6.7 17.3 5 19" />
+        </g>
+      </svg>
+      <svg class="theme-toggle__icon theme-toggle__moon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20 14.4A8.4 8.4 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4Z" />
+      </svg>
+      <span class="theme-toggle__text" id="theme-toggle-text">Light</span>
+    </button>
 
     <!--
       The break overlay. Inert and hidden until the hero countdown fires it,
@@ -52,7 +104,7 @@
     <header class="hero" id="hero">
       <div class="hero__inner">
         <div class="brand">
-          <img class="brand__mark" src="logo.svg" alt="" width="34" height="34" />
+          <svg class="brand__mark" width="34" height="34" aria-hidden="true"><use href="#logo-mark" /></svg>
           <span class="brand__name">Screen Break</span>
         </div>
 
@@ -65,17 +117,13 @@
         </p>
 
         <!--
-          Deliberately visible: the takeover is coming, and the visitor can see
-          it coming. A surprise fullscreen hijack would be indefensible.
+          Nothing fires on its own any more: the demo is entirely opt-in, and
+          the short pre-roll counts down on the button itself so it is obvious
+          what is about to happen. Clicking again cancels.
         -->
-        <div class="ticker" id="ticker">
-          <span class="ticker__label" id="ticker-label">Demo break in</span>
-          <span class="ticker__value" id="ticker-value">00:08</span>
-        </div>
-
         <div class="hero__actions">
-          <button type="button" class="button button--primary" id="fire-now">
-            Watch it happen
+          <button type="button" class="button button--primary" id="demo" data-idle="Demo">
+            Demo
           </button>
           <a class="button" href="#get-it">Get it</a>
         </div>
@@ -227,7 +275,7 @@
         </div>
 
         <div class="shots">
-          <figure class="shot shot--wide">
+          <figure class="shot">
             <img
               src="images/break.png"
               alt="The fullscreen break screen: the words TAKE A BREAK above the instruction to look away and focus on something in the distance, with a large countdown reading 00:57."
@@ -237,7 +285,7 @@
             />
             <figcaption>The break, on the default dark background.</figcaption>
           </figure>
-          <figure class="shot shot--wide">
+          <figure class="shot">
             <img
               src="images/break-quote.png"
               alt="The break screen showing the quote 'Your eyes are muscles. Let them stretch.' in place of the default heading."
@@ -247,7 +295,7 @@
             />
             <figcaption>With one of your own lines instead.</figcaption>
           </figure>
-          <figure class="shot">
+          <figure class="shot shot--tall">
             <img
               src="images/settings.png"
               alt="The settings window: interval presets, a reset-current-timer checkbox, duration presets, an appearance section with a font dropdown and colour swatch, and a countdown above Pause and Start Break Now."
@@ -257,7 +305,7 @@
             />
             <figcaption>Everything there is to configure.</figcaption>
           </figure>
-          <figure class="shot">
+          <figure class="shot shot--tall">
             <img
               src="images/first-run.png"
               alt="The first-run screen: the app name, the line 'Take regular breaks to rest your eyes', the schedule 'Every 1 hour for 1 minute', and a single Start button."
@@ -331,6 +379,11 @@ pnpm tauri build</code></pre>
               >
               has the details.
             </p>
+
+            <p class="get__warning">
+              Currently the builds are unsigned, so macOS and Windows will warn
+              you the first time. On macOS, right-click the app and choose Open.
+            </p>
           </div>
 
           <ul class="platforms">
@@ -349,23 +402,13 @@ pnpm tauri build</code></pre>
           </ul>
         </div>
 
-        <p class="field__hint">
-          Because the builds are unsigned, macOS and Windows will warn you the
-          first time. On macOS, right-click the app and choose Open. Removing
-          those warnings needs paid certificates —
-          <a
-            href="https://github.com/shivpsingh/screenbreak/blob/main/docs/distribution.md"
-            >the distribution notes</a
-          >
-          explain what that involves.
-        </p>
       </section>
     </main>
 
     <footer class="footer">
       <div class="footer__inner">
         <div class="brand brand--small">
-          <img class="brand__mark" src="logo.svg" alt="" width="24" height="24" />
+          <svg class="brand__mark" width="24" height="24" aria-hidden="true"><use href="#logo-mark" /></svg>
           <span class="brand__name">Screen Break</span>
         </div>
 

@@ -1,8 +1,8 @@
 /*
  * Screen Break — landing page demo.
  *
- * Two jobs: run the break takeover once per visit, and keep the live preview in
- * step with the colour picker and the quote field.
+ * Three jobs: run the break demo on request, keep the live preview in step with
+ * the colour picker and the quote field, and remember the theme choice.
  *
  * No dependencies and no build step, matching the app itself.
  */
@@ -90,17 +90,13 @@
   var colourInput = document.getElementById("colour");
   var quoteInput = document.getElementById("quote");
   var contrastOut = document.getElementById("contrast");
-  var ticker = document.getElementById("ticker");
-  var tickerLabel = document.getElementById("ticker-label");
-  var tickerValue = document.getElementById("ticker-value");
-  var fireButton = document.getElementById("fire-now");
-  var hero = document.getElementById("hero");
+  var demoButton = document.getElementById("demo");
+  var themeToggle = document.getElementById("theme-toggle");
+  var themeToggleText = document.getElementById("theme-toggle-text");
 
-  var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-  var HERO_COUNTDOWN_MS = 8000;
+  var PREROLL_SECONDS = 5;
   var BREAK_MS = 10000;
-  var SESSION_KEY = "screen-break:demo-shown";
+  var THEME_KEY = "screen-break:theme";
 
   function formatCountdown(ms) {
     var total = Math.max(0, Math.ceil(ms / 1000));
@@ -179,7 +175,6 @@
     if (lastFocused && typeof lastFocused.focus === "function") {
       lastFocused.focus();
     }
-    setTickerDone();
   }
 
   function onBreakKey(event) {
@@ -191,13 +186,6 @@
 
   function openBreak() {
     if (!overlay.hidden) return;
-    try {
-      window.sessionStorage.setItem(SESSION_KEY, "1");
-    } catch (e) {
-      /* Private browsing can refuse storage; the demo still works, it just
-         may fire again on the next page load. */
-    }
-
     lastFocused = document.activeElement;
     overlay.hidden = false;
     overlay.setAttribute("aria-hidden", "false");
@@ -216,78 +204,73 @@
     overlay.addEventListener("click", closeBreak);
   }
 
-  // ------------------------------------------------------- hero countdown
+  // ------------------------------------------------------------- pre-roll
+  //
+  // Nothing fires unattended any more. The demo is opt-in, and the short
+  // countdown runs on the button itself so it is obvious what is coming.
+  // That also removes the need for the old safeguards — no once-per-visit
+  // tracking, no in-viewport check, no reduced-motion opt-out — because an
+  // explicit click is consent.
 
-  var heroDeadline = null;
-  var heroTick = null;
-  var heroInView = true;
+  var prerollTick = null;
+  var prerollRemaining = 0;
 
-  function setTickerDone() {
-    window.clearInterval(heroTick);
-    heroTick = null;
-    heroDeadline = null;
-    ticker.setAttribute("data-state", "done");
-    tickerLabel.textContent = "Demo break";
-    tickerValue.textContent = "done";
-    fireButton.textContent = "Show me again";
+  function resetButton() {
+    window.clearInterval(prerollTick);
+    prerollTick = null;
+    demoButton.textContent = demoButton.getAttribute("data-idle");
   }
 
-  function startHeroCountdown() {
-    heroDeadline = Date.now() + HERO_COUNTDOWN_MS;
-    tickerValue.textContent = formatCountdown(HERO_COUNTDOWN_MS);
-    heroTick = window.setInterval(function () {
-      var remaining = heroDeadline - Date.now();
-      tickerValue.textContent = formatCountdown(remaining);
-      if (remaining > 0) return;
-
-      // Only interrupt someone who is actually looking at the hero. Firing a
-      // fullscreen takeover while they are reading further down the page would
-      // be indefensible.
-      if (!heroInView) {
-        setTickerDone();
+  function startPreroll() {
+    prerollRemaining = PREROLL_SECONDS;
+    demoButton.textContent = "Demo (" + prerollRemaining + "s)";
+    prerollTick = window.setInterval(function () {
+      prerollRemaining -= 1;
+      if (prerollRemaining > 0) {
+        demoButton.textContent = "Demo (" + prerollRemaining + "s)";
         return;
       }
-      window.clearInterval(heroTick);
-      heroTick = null;
+      resetButton();
       openBreak();
-    }, 250);
+    }, 1000);
   }
 
-  // Explicit request always works, and is the only path under reduced motion.
-  fireButton.addEventListener("click", function () {
-    if (heroTick) {
-      window.clearInterval(heroTick);
-      heroTick = null;
+  demoButton.addEventListener("click", function () {
+    // A second click during the countdown cancels it, so starting the demo is
+    // never a commitment.
+    if (prerollTick) {
+      resetButton();
+      return;
     }
-    openBreak();
+    startPreroll();
   });
 
-  if ("IntersectionObserver" in window && hero) {
-    new IntersectionObserver(
-      function (entries) {
-        heroInView = entries[0].isIntersecting;
-      },
-      { threshold: 0.4 },
-    ).observe(hero);
+  // ---------------------------------------------------------------- theme
+
+  function applyThemeLabel() {
+    var isLight = document.documentElement.dataset.theme === "light";
+    // The control offers the mode you are not in.
+    themeToggleText.textContent = isLight ? "Dark" : "Light";
+    themeToggle.setAttribute(
+      "aria-label",
+      isLight ? "Switch to dark theme" : "Switch to light theme",
+    );
   }
 
-  var alreadyShown = false;
-  try {
-    alreadyShown = window.sessionStorage.getItem(SESSION_KEY) === "1";
-  } catch (e) {
-    /* Storage unavailable; treat as not yet shown. */
-  }
+  themeToggle.addEventListener("click", function () {
+    var isLight = document.documentElement.dataset.theme === "light";
+    if (isLight) {
+      delete document.documentElement.dataset.theme;
+    } else {
+      document.documentElement.dataset.theme = "light";
+    }
+    try {
+      window.localStorage.setItem(THEME_KEY, isLight ? "dark" : "light");
+    } catch (e) {
+      /* Storage can be blocked; the choice simply will not persist. */
+    }
+    applyThemeLabel();
+  });
 
-  if (reducedMotion.matches) {
-    // No takeover at all. The inline preview in "Make it yours" is the static
-    // equivalent, so nothing is lost beyond the surprise.
-    ticker.setAttribute("data-state", "done");
-    tickerLabel.textContent = "Demo break";
-    tickerValue.textContent = "on request";
-  } else if (alreadyShown) {
-    // Once per visit. Reloading should not mean being interrupted again.
-    setTickerDone();
-  } else {
-    startHeroCountdown();
-  }
+  applyThemeLabel();
 })();

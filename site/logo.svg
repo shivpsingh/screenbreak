@@ -1,17 +1,19 @@
 <!--
-  Screen Break mark.
+  Screen Break mark — favicon copy.
 
-  A screen outline with its top-right corner deliberately missing — the break —
+  A screen outline with its top-right corner deliberately missing (the break)
   and a dot resting outside the gap: the thing in the distance you are meant to
-  look at. Monochrome and stroked in `currentColor` so it inherits whatever it
-  is placed on, and legible down to 16px.
+  look at.
+
+  The in-page copy lives inline in index.html as a <symbol> so it can inherit
+  `currentColor` and follow the theme. This standalone file is used only as the
+  favicon, where there is no page colour to inherit, so the accent colour is
+  hardcoded to stay visible against both light and dark browser chrome.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"
-     stroke="currentColor" stroke-width="2.1"
+     stroke="#8da2f0" stroke-width="2.1"
      stroke-linecap="round" stroke-linejoin="round" role="img"
      aria-label="Screen Break">
-  <!-- The screen, open at the top right. -->
   <path d="M18 5H6a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-5" />
-  <!-- Something in the distance. -->
-  <circle cx="26.5" cy="6.5" r="2.6" fill="currentColor" stroke="none" />
+  <circle cx="26.5" cy="6.5" r="2.6" fill="#8da2f0" stroke="none" />
 </svg>
