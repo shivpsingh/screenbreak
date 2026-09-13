@@ -1,0 +1,32 @@
+<!--
+  Source artwork for the desktop app icons. Regenerate every platform's icon
+  set from this file with:
+
+      pnpm tauri icon app-icon.svg
+
+  Same mark as the website and the favicon — a screen with its top-right corner
+  missing, and a dot resting outside the gap — but drawn as a real app icon
+  rather than a bare glyph: a rounded square so it has a silhouette in the Dock
+  and the taskbar, and a dark ground so the white mark reads on both light and
+  dark desktops.
+
+  The mark is scaled and translated from the original 32-unit drawing so it sits
+  optically centred; the raw path is not centred in its own viewBox because the
+  dot sits high and to the right.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect width="1024" height="1024" rx="224" fill="#14141a" />
+
+  <g
+    transform="translate(186, 239) scale(21)"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="2.1"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M18 5H6a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-5" />
+    <!-- Something in the distance, in the accent colour the site uses. -->
+    <circle cx="26.5" cy="6.5" r="2.6" fill="#8da2f0" stroke="none" />
+  </g>
+</svg>

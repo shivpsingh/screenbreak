@@ -25,3 +25,7 @@ dist-ssr
 
 # Generated: copied from docs/images by `pnpm site` and by the Pages workflow.
 site/images/
+
+# `tauri icon` also emits mobile sets; this app is desktop-only.
+src-tauri/icons/android/
+src-tauri/icons/ios/

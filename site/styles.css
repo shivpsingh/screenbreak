@@ -24,43 +24,11 @@
   font-display: swap;
 }
 
-:root {
-  --bg: #0c0c10;
-  --bg-alt: #121218;
-  --surface: #17171e;
-  --border: #2a2a33;
-  --border-strong: #3d3d49;
-  --text: #f2f2f4;
-  --text-muted: #a2a2ae;
-  --accent: #8da2f0;
-  --accent-hover: #adbcf6;
-  --accent-ink: #14141a;
-
-  --radius: 10px;
-  --measure: 62ch;
-  --page: 1120px;
-
-  --code-bg: #0a0a0e;
-  --glow: rgba(141, 162, 240, 0.1);
-
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  --font-display: "Ubuntu Mono", ui-monospace, "SF Mono", Menlo, monospace;
-
-  /* Defaults for the break demo; demo.js overwrites these live. */
-  --break-bg: #101014;
-  --break-fg: #f4f4f6;
-  --break-fg-muted: #a8a8b2;
-}
-
 /*
- * Light theme. Dark is the default — absence of the attribute — so nothing
- * here runs unless the visitor opts in, and the choice is remembered.
- *
- * The --break-* values are deliberately NOT overridden: the break screen's
- * colour is the app's own setting, controlled by the picker further down the
- * page, and it should look the same whichever theme the site is wearing.
+ * Light is the default theme — these are the base tokens. Dark is opted into
+ * via data-theme="dark" below, and the choice is remembered.
  */
-:root[data-theme="light"] {
+:root {
   --bg: #fbfbfc;
   --bg-alt: #f2f2f5;
   --surface: #ffffff;
@@ -72,8 +40,41 @@
   --accent-hover: #2a41a6;
   --accent-ink: #ffffff;
 
+  --radius: 10px;
+  --measure: 62ch;
+  --page: 1120px;
+
   --code-bg: #f6f6f9;
   --glow: rgba(53, 80, 200, 0.08);
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-display: "Ubuntu Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /*
+   * The break demo's own colours, overwritten live by demo.js. Deliberately
+   * outside both themes: this is the app's setting, controlled by the picker
+   * further down the page, and it should look the same whichever theme the
+   * site is wearing.
+   */
+  --break-bg: #101014;
+  --break-fg: #f4f4f6;
+  --break-fg-muted: #a8a8b2;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0c0c10;
+  --bg-alt: #121218;
+  --surface: #17171e;
+  --border: #2a2a33;
+  --border-strong: #3d3d49;
+  --text: #f2f2f4;
+  --text-muted: #a2a2ae;
+  --accent: #8da2f0;
+  --accent-hover: #adbcf6;
+  --accent-ink: #14141a;
+
+  --code-bg: #0a0a0e;
+  --glow: rgba(141, 162, 240, 0.1);
 }
 
 * {
@@ -261,8 +262,8 @@ body.demo-active .theme-toggle {
 }
 
 /* Show the mode you would switch to, not the one you are in. */
-:root:not([data-theme="light"]) .theme-toggle__moon,
-:root[data-theme="light"] .theme-toggle__sun {
+:root:not([data-theme="dark"]) .theme-toggle__sun,
+:root[data-theme="dark"] .theme-toggle__moon {
   display: none;
 }
 

@@ -250,25 +250,31 @@
 
   // ---------------------------------------------------------------- theme
 
+  // Light is the default, so the absence of the attribute means light and
+  // dark is the opt-in.
+  function isDarkTheme() {
+    return document.documentElement.dataset.theme === "dark";
+  }
+
   function applyThemeLabel() {
-    var isLight = document.documentElement.dataset.theme === "light";
+    var dark = isDarkTheme();
     // The control offers the mode you are not in.
-    themeToggleText.textContent = isLight ? "Dark" : "Light";
+    themeToggleText.textContent = dark ? "Light" : "Dark";
     themeToggle.setAttribute(
       "aria-label",
-      isLight ? "Switch to dark theme" : "Switch to light theme",
+      dark ? "Switch to light theme" : "Switch to dark theme",
     );
   }
 
   themeToggle.addEventListener("click", function () {
-    var isLight = document.documentElement.dataset.theme === "light";
-    if (isLight) {
+    var dark = isDarkTheme();
+    if (dark) {
       delete document.documentElement.dataset.theme;
     } else {
-      document.documentElement.dataset.theme = "light";
+      document.documentElement.dataset.theme = "dark";
     }
     try {
-      window.localStorage.setItem(THEME_KEY, isLight ? "dark" : "light");
+      window.localStorage.setItem(THEME_KEY, dark ? "light" : "dark");
     } catch (e) {
       /* Storage can be blocked; the choice simply will not persist. */
     }

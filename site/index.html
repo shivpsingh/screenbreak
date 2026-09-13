@@ -8,7 +8,7 @@
       name="description"
       content="A small local-first desktop app that interrupts you now and then with a fullscreen reminder to look away from your screen. macOS, Windows and Linux. No accounts, no telemetry, no network."
     />
-    <meta name="theme-color" content="#101014" />
+    <meta name="theme-color" content="#fbfbfc" />
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Screen Break" />
@@ -23,14 +23,14 @@
     <link rel="stylesheet" href="styles.css" />
 
     <script>
-      // Applied before first paint, so a light-theme visitor never sees a
-      // flash of dark. Absence of the attribute means dark, which is default.
+      // Applied before first paint, so a dark-theme visitor never sees a
+      // flash of light. Absence of the attribute means light, the default.
       (function () {
         try {
           var saved = localStorage.getItem("screen-break:theme");
-          if (saved === "light") document.documentElement.dataset.theme = "light";
+          if (saved === "dark") document.documentElement.dataset.theme = "dark";
         } catch (e) {
-          /* Storage can be blocked; dark is a fine fallback. */
+          /* Storage can be blocked; light is a fine fallback. */
         }
       })();
     </script>
@@ -64,7 +64,7 @@
       type="button"
       class="theme-toggle"
       id="theme-toggle"
-      aria-label="Switch to light theme"
+      aria-label="Switch to dark theme"
     >
       <svg class="theme-toggle__icon theme-toggle__sun" viewBox="0 0 24 24" aria-hidden="true">
         <circle cx="12" cy="12" r="4.6" />
@@ -75,7 +75,7 @@
       <svg class="theme-toggle__icon theme-toggle__moon" viewBox="0 0 24 24" aria-hidden="true">
         <path d="M20 14.4A8.4 8.4 0 0 1 9.6 4a8.4 8.4 0 1 0 10.4 10.4Z" />
       </svg>
-      <span class="theme-toggle__text" id="theme-toggle-text">Light</span>
+      <span class="theme-toggle__text" id="theme-toggle-text">Dark</span>
     </button>
 
     <!--
