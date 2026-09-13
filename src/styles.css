@@ -99,7 +99,10 @@ body {
   flex-direction: column;
   gap: var(--gap);
   padding: 28px 24px;
-  min-height: 100%;
+  /* Viewport units rather than a percentage: the React root has no height of
+     its own, so `100%` resolved against nothing and left the centred welcome
+     view stranded at the top of the window. */
+  min-height: 100vh;
 }
 
 /* The window is resizable and can be made shorter than the content, so the
