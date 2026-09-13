@@ -682,12 +682,17 @@ body.demo-active .theme-toggle {
 
 /*
  * The tall window screenshots are a fraction of the width of the break
- * screens, so they are capped — but they stay flush with the start of their
- * column rather than being nudged toward the caption, so every image down the
- * page shares one left edge and every caption shares another.
+ * screens, so they are capped. They then hug the outer edge of the page, the
+ * same edge the full-width break screenshots reach: left on the image/text
+ * rows, right on the text/image ones. Without this the capped image sits at
+ * the inner edge of its column and reads as though it were centred.
  */
 .shot--tall img {
   max-width: 440px;
+}
+
+.shot--tall:nth-child(even) img {
+  margin-left: auto;
 }
 
 /* ------------------------------------------------------------------ proof */
@@ -845,8 +850,10 @@ pre {
     grid-area: auto;
   }
 
-  .shot--tall img {
+  .shot--tall img,
+  .shot--tall:nth-child(even) img {
     max-width: none;
+    margin-left: 0;
   }
 
   .section {
