@@ -1,9 +1,10 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SettingsPage } from "./SettingsPage";
 import { createMockBackend, defaultBootstrap, type MockBackend } from "../test/mockIpc";
+import { DEFAULT_SETTINGS } from "../types/settings";
 import type { Bootstrap } from "../types/timer";
 
 let backend: MockBackend;
@@ -87,7 +88,7 @@ describe("configuring durations", () => {
   it("marks the stored preset as selected", async () => {
     await renderPage({
       ...defaultBootstrap,
-      settings: { enabled: true, intervalSeconds: 2700, breakDurationSeconds: 15 },
+      settings: { ...DEFAULT_SETTINGS, intervalSeconds: 2700, breakDurationSeconds: 15 },
     });
 
     expect(screen.getByRole("radio", { name: "45m" })).toBeChecked();
@@ -95,23 +96,41 @@ describe("configuring durations", () => {
     expect(screen.getByRole("radio", { name: "60m" })).not.toBeChecked();
   });
 
-  it("opens a custom field prefilled with the current value", async () => {
+  it("opens the custom fields at the configured prefill, not the current value", async () => {
+    await renderPage();
+
+    const [intervalCustom, durationCustom] = screen.getAllByRole("radio", { name: "Custom" });
+
+    await userEvent.click(intervalCustom);
+    expect(screen.getByLabelText("Custom (minutes)")).toHaveValue("90");
+
+    await userEvent.click(durationCustom);
+    expect(screen.getByLabelText("Custom (seconds)")).toHaveValue("10");
+  });
+
+  it("applies the prefill immediately, so the field never shows an unsaved value", async () => {
     await renderPage();
 
     const [intervalCustom] = screen.getAllByRole("radio", { name: "Custom" });
     await userEvent.click(intervalCustom);
 
-    const field = screen.getByLabelText("Custom (minutes)");
-    expect(field).toHaveValue("60");
+    await waitFor(() =>
+      expect(backend.invoke).toHaveBeenCalledWith("update_settings", {
+        settings: expect.objectContaining({ intervalSeconds: 90 * 60 }),
+      }),
+    );
   });
 
   it("shows an inline error and saves nothing for an invalid custom value", async () => {
     await renderPage();
-    const callsBefore = commandNames().length;
 
     const [intervalCustom] = screen.getAllByRole("radio", { name: "Custom" });
     await userEvent.click(intervalCustom);
     const field = screen.getByLabelText("Custom (minutes)");
+    // Opening the field applies the prefill; only edits after that are measured.
+    await waitFor(() => expect(commandNames()).toContain("update_settings"));
+    const callsBefore = commandNames().length;
+
     await userEvent.clear(field);
     await userEvent.type(field, "0");
 
@@ -140,7 +159,7 @@ describe("configuring durations", () => {
   it("reopens the custom field when the stored value is not a preset", async () => {
     await renderPage({
       ...defaultBootstrap,
-      settings: { enabled: true, intervalSeconds: 1500, breakDurationSeconds: 45 },
+      settings: { ...DEFAULT_SETTINGS, intervalSeconds: 1500, breakDurationSeconds: 45 },
     });
 
     expect(screen.getByLabelText("Custom (minutes)")).toHaveValue("25");
@@ -266,5 +285,96 @@ describe("error handling", () => {
 
     expect(await screen.findByRole("heading", { name: "Screen Break" })).toBeInTheDocument();
     expect(await screen.findByRole("alert")).toHaveTextContent("backend unavailable");
+  });
+});
+
+describe("reset current timer toggle", () => {
+  it("is on by default and persists a change", async () => {
+    await renderPage();
+
+    const toggle = screen.getByRole("checkbox", { name: /reset current timer/i });
+    expect(toggle).toBeChecked();
+
+    await userEvent.click(toggle);
+
+    await waitFor(() =>
+      expect(backend.invoke).toHaveBeenCalledWith("update_settings", {
+        settings: expect.objectContaining({ resetTimerOnChange: false }),
+      }),
+    );
+  });
+
+  it("reflects a persisted off state", async () => {
+    await renderPage({
+      ...defaultBootstrap,
+      settings: { ...DEFAULT_SETTINGS, resetTimerOnChange: false },
+    });
+
+    expect(screen.getByRole("checkbox", { name: /reset current timer/i })).not.toBeChecked();
+  });
+
+  it("carries the flag along when a duration is changed", async () => {
+    // The backend decides whether to restart; the UI's job is to send the flag
+    // together with the new duration.
+    await renderPage({
+      ...defaultBootstrap,
+      settings: { ...DEFAULT_SETTINGS, resetTimerOnChange: true },
+    });
+
+    await userEvent.click(screen.getByRole("radio", { name: "30m" }));
+
+    await waitFor(() =>
+      expect(backend.invoke).toHaveBeenCalledWith("update_settings", {
+        settings: expect.objectContaining({ intervalSeconds: 1800, resetTimerOnChange: true }),
+      }),
+    );
+  });
+});
+
+describe("appearance", () => {
+  it("defaults to Ubuntu Mono and persists a different font", async () => {
+    await renderPage();
+
+    const select = screen.getByLabelText("Font");
+    expect(select).toHaveValue("ubuntuMono");
+
+    await userEvent.selectOptions(select, "serif");
+
+    await waitFor(() =>
+      expect(backend.invoke).toHaveBeenCalledWith("update_settings", {
+        settings: expect.objectContaining({ fontChoice: "serif" }),
+      }),
+    );
+  });
+
+  it("persists a background colour", async () => {
+    await renderPage();
+
+    const input = screen.getByLabelText("Break background");
+    expect(input).toHaveValue("#101014");
+
+    // A colour input is not text-editable, so the value is set directly the
+    // way the native picker would.
+    fireEvent.input(input, { target: { value: "#f5f0e0" } });
+
+    await waitFor(() =>
+      expect(backend.invoke).toHaveBeenCalledWith("update_settings", {
+        settings: expect.objectContaining({ breakBackgroundColor: "#f5f0e0" }),
+      }),
+    );
+  });
+
+  it("previews the derived text colour so a light background is visibly safe", async () => {
+    await renderPage({
+      ...defaultBootstrap,
+      settings: { ...DEFAULT_SETTINGS, breakBackgroundColor: "#f5f0e0" },
+    });
+
+    const preview = screen.getByText("Take a break");
+    expect(preview).toHaveStyle({ backgroundColor: "#f5f0e0" });
+    // Dark text on a light background, chosen automatically.
+    expect(preview).toHaveStyle({ color: "#101014" });
+    // The guarantee is also stated numerically.
+    expect(screen.getByText(/contrast \d+\.\d:1/)).toBeInTheDocument();
   });
 });

@@ -12,13 +12,15 @@ interface DurationPickerProps {
   unitSuffix: string;
   /** Plural unit name used in the custom field's label and messages. */
   unitLabel: string;
+  /** Value the custom field starts at when opened, in `unitLabel` units. */
+  customPrefill: number;
   valueSeconds: number;
   onChange: (seconds: number) => void;
   validate: (raw: string) => ValidationResult;
 }
 
 /**
- * Preset buttons plus a validated custom field.
+ * Preset buttons plus a validated custom field, all on one row.
  *
  * Used for both the break interval and the break duration — they differ only
  * in their units, presets and bounds, so one component covers both rather than
@@ -34,6 +36,7 @@ export function DurationPicker({
   unitSeconds,
   unitSuffix,
   unitLabel,
+  customPrefill,
   valueSeconds,
   onChange,
   validate,
@@ -53,20 +56,14 @@ export function DurationPicker({
   const customRef = useRef<HTMLInputElement>(null);
 
   // Reopen the custom field when the stored value stops matching a preset,
-  // which happens after loading settings that were customised previously.
+  // which happens after loading settings that were customised previously. The
+  // stored value is shown, not the prefill — otherwise a saved 25-minute
+  // interval would come back displaying 90.
   useEffect(() => {
     if (isCustom) setDraft((current) => current ?? String(valueSeconds / unitSeconds));
   }, [isCustom, valueSeconds, unitSeconds]);
 
-  const openCustom = () => {
-    setDraft(String(valueSeconds / unitSeconds));
-    setError(null);
-    // Focus after the field has been rendered.
-    requestAnimationFrame(() => customRef.current?.focus());
-  };
-
-  const commitCustom = (raw: string) => {
-    setDraft(raw);
+  const commit = (raw: string) => {
     const result = validate(raw);
     if (result.ok) {
       setError(null);
@@ -74,6 +71,16 @@ export function DurationPicker({
     } else {
       setError(result.error);
     }
+  };
+
+  const openCustom = () => {
+    const prefill = String(customPrefill);
+    setDraft(prefill);
+    // Applied straight away, like clicking a preset does, so the field never
+    // shows a value that is not actually the current setting.
+    commit(prefill);
+    // Selected rather than merely focused, so typing replaces the prefill.
+    requestAnimationFrame(() => customRef.current?.select());
   };
 
   const customSelected = draft !== null;
@@ -104,6 +111,7 @@ export function DurationPicker({
             </label>
           );
         })}
+
         <label className="chip">
           <input
             type="radio"
@@ -114,32 +122,40 @@ export function DurationPicker({
           />
           <span className="chip__face">Custom</span>
         </label>
-      </div>
 
-      {customSelected && (
-        <div className="picker__custom">
-          <label className="picker__custom-label" htmlFor={customInputId}>
-            {`Custom (${unitLabel})`}
-          </label>
-          <input
-            ref={customRef}
-            id={customInputId}
-            className="picker__custom-input"
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            value={draft ?? ""}
-            aria-invalid={error !== null}
-            aria-describedby={error ? errorId : undefined}
-            onChange={(event) => commitCustom(event.target.value)}
-          />
-          {error && (
-            <p className="picker__error" id={errorId} role="alert">
-              {error}
-            </p>
-          )}
-        </div>
-      )}
+        {customSelected && (
+          <span className="picker__custom">
+            <input
+              ref={customRef}
+              id={customInputId}
+              className="picker__custom-input"
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              // An aria-label rather than a visible <label> keeps the field
+              // inline with the chips while staying fully described to a
+              // screen reader.
+              aria-label={`Custom (${unitLabel})`}
+              value={draft ?? ""}
+              aria-invalid={error !== null}
+              aria-describedby={error ? errorId : undefined}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                commit(event.target.value);
+              }}
+            />
+            <span className="picker__custom-unit" aria-hidden="true">
+              {unitSuffix}
+            </span>
+          </span>
+        )}
+
+        {error && (
+          <p className="picker__error" id={errorId} role="alert">
+            {error}
+          </p>
+        )}
+      </div>
     </fieldset>
   );
 }

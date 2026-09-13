@@ -37,8 +37,8 @@ pub fn show_settings<R: Runtime>(app: &AppHandle<R>) -> Result<(), String> {
 
     WebviewWindowBuilder::new(app, SETTINGS_WINDOW_LABEL, WebviewUrl::App("index.html".into()))
         .title("Screen Break")
-        .inner_size(420.0, 620.0)
-        .min_inner_size(380.0, 560.0)
+        .inner_size(520.0, 820.0)
+        .min_inner_size(470.0, 480.0)
         .resizable(true)
         .center()
         .build()

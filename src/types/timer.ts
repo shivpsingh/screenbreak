@@ -22,3 +22,17 @@ export interface Bootstrap {
   snapshot: TimerSnapshot;
   isFirstRun: boolean;
 }
+
+/**
+ * Everything the break window needs, fetched once when it mounts.
+ *
+ * Deliberately separate from `TimerSnapshot`, which stays a small value owned
+ * by the pure Rust timer. A break window is created fresh for each break, so
+ * the quote and theme do not need to be streamed.
+ */
+export interface BreakView {
+  /** The quote for this break, or `null` when `quotes.json` is empty. */
+  quote: string | null;
+  settings: Settings;
+  snapshot: TimerSnapshot;
+}

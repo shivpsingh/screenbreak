@@ -12,8 +12,8 @@ use crate::settings::Settings;
 use crate::timer::TimerSnapshot;
 use crate::windows;
 
-/// Everything the UI needs for its first paint, in one round trip.
-#[derive(serde::Serialize, Clone, Copy)]
+/// Everything the settings window needs for its first paint, in one round trip.
+#[derive(serde::Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Bootstrap {
     pub settings: Settings,
@@ -35,6 +35,31 @@ pub fn get_bootstrap<R: Runtime>(app: AppHandle<R>) -> Bootstrap {
 #[tauri::command]
 pub fn get_snapshot<R: Runtime>(app: AppHandle<R>) -> TimerSnapshot {
     app_core::snapshot(&app)
+}
+
+/// Everything the break window needs, in one round trip.
+///
+/// Kept separate from the streamed timer snapshot so that `TimerSnapshot`
+/// stays a small `Copy` value owned by the pure timer module, free of strings
+/// and allocation. A break window is created fresh for each break, so a single
+/// fetch at mount is the right shape for the quote and the theme.
+#[derive(serde::Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct BreakView {
+    /// The quote for this break, or `None` when `quotes.json` is empty and the
+    /// default heading should be shown instead.
+    pub quote: Option<String>,
+    pub settings: Settings,
+    pub snapshot: TimerSnapshot,
+}
+
+#[tauri::command]
+pub fn get_break_view<R: Runtime>(app: AppHandle<R>) -> BreakView {
+    BreakView {
+        quote: app_core::active_quote(&app),
+        settings: app_core::settings_of(&app),
+        snapshot: app_core::snapshot(&app),
+    }
 }
 
 /// Validates, applies and persists new durations.

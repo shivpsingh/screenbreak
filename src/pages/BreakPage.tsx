@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import { useNow } from "../hooks/useNow";
 import { api, onSnapshot } from "../lib/tauri";
 import { formatCountdown, getRemainingMilliseconds } from "../lib/timer";
+import { breakThemeVariables } from "../lib/theme";
+import { DEFAULT_SETTINGS } from "../types/settings";
+import type { Settings } from "../types/settings";
 import type { TimerSnapshot } from "../types/timer";
 
 /**
@@ -14,6 +17,8 @@ import type { TimerSnapshot } from "../types/timer";
  */
 export function BreakPage() {
   const [snapshot, setSnapshot] = useState<TimerSnapshot | null>(null);
+  const [quote, setQuote] = useState<string | null>(null);
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,12 +36,18 @@ export function BreakPage() {
            closes this window on time regardless of what is rendered here. */
       });
 
-    api.getSnapshot().then(
-      (initial) => {
-        if (!cancelled) setSnapshot(initial);
+    // One round trip for the quote, the theme and the initial deadline. This
+    // window is created fresh for each break, so a single fetch at mount is
+    // all that is needed — the quote is fixed for the duration of the break.
+    api.getBreakView().then(
+      (view) => {
+        if (cancelled) return;
+        setSnapshot(view.snapshot);
+        setQuote(view.quote ?? null);
+        setSettings(view.settings);
       },
       () => {
-        /* Ignored for the same reason. */
+        /* Ignored: the default theme and the heading still render. */
       },
     );
 
@@ -64,9 +75,17 @@ export function BreakPage() {
   const deadline = snapshot?.state === "BREAK_ACTIVE" ? snapshot.breakEndsAt ?? null : null;
   const now = useNow(250, deadline !== null);
 
+  const theme = breakThemeVariables(settings.breakBackgroundColor, settings.fontChoice);
+
   return (
-    <main className="break">
-      <h1 className="break__heading">Take a break</h1>
+    <main className="break" style={theme as React.CSSProperties}>
+      {/* A quote from quotes.json replaces the default heading. With no
+          quotes configured the original wording is shown instead. */}
+      {quote ? (
+        <h1 className="break__quote">{quote}</h1>
+      ) : (
+        <h1 className="break__heading">Take a break</h1>
+      )}
       <p className="break__message">
         Look away from your screen and focus on something in the distance.
       </p>

@@ -9,6 +9,7 @@
 mod app_core;
 mod commands;
 mod monitors;
+mod quotes;
 mod settings;
 mod timer;
 mod tray;
@@ -26,6 +27,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_bootstrap,
             commands::get_snapshot,
+            commands::get_break_view,
             commands::update_settings,
             commands::set_enabled,
             commands::timer_start,
@@ -45,6 +47,10 @@ pub fn run() {
                 eprintln!("screen-break: could not resolve the config directory ({e}); settings will not persist");
                 std::env::temp_dir().join("screen-break")
             });
+
+            // Created up front so the file is discoverable; an existing one
+            // is never overwritten.
+            quotes::ensure_exists(&config_dir);
 
             let core = AppCore::new(config_dir);
             let enabled = core.settings.enabled;

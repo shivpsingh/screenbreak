@@ -1,12 +1,15 @@
 import { Controls } from "../components/Controls";
 import { DurationPicker } from "../components/DurationPicker";
+import { ThemePicker } from "../components/ThemePicker";
 import { TimerStatus } from "../components/TimerStatus";
 import { Toggle } from "../components/Toggle";
 import { useTimerState } from "../hooks/useTimerState";
 import { formatDuration } from "../lib/timer";
+import { fontStackFor } from "../lib/theme";
 import { validateBreakDurationSeconds, validateIntervalMinutes } from "../lib/validation";
 import {
   BREAK_DURATION_PRESETS_SECONDS,
+  CUSTOM_PREFILL,
   INTERVAL_PRESETS_MINUTES,
 } from "../types/settings";
 
@@ -20,9 +23,12 @@ export function SettingsPage() {
     return <main className="app app--loading" aria-busy="true" />;
   }
 
+  // The chosen font applies to the settings window too, not just the break.
+  const fontStyle = { fontFamily: fontStackFor(settings.fontChoice) };
+
   if (timer.isFirstRun) {
     return (
-      <main className="app app--welcome">
+      <main className="app app--welcome" style={fontStyle}>
         <h1 className="app__title">Screen Break</h1>
         <p className="app__tagline">Take regular breaks to rest your eyes.</p>
         <p className="welcome__summary">
@@ -46,10 +52,8 @@ export function SettingsPage() {
     );
   }
 
-  const remindersOn = settings.enabled;
-
   return (
-    <main className="app">
+    <main className="app" style={fontStyle}>
       <header className="app__header">
         <h1 className="app__title">Screen Break</h1>
         <p className="app__tagline">Take regular breaks to rest your eyes.</p>
@@ -61,10 +65,24 @@ export function SettingsPage() {
         unitSeconds={60}
         unitSuffix="m"
         unitLabel="minutes"
+        customPrefill={CUSTOM_PREFILL.intervalMinutes}
         valueSeconds={settings.intervalSeconds}
         validate={validateIntervalMinutes}
         onChange={(intervalSeconds) => timer.saveSettings({ ...settings, intervalSeconds })}
       />
+
+      <Toggle
+        compact
+        label="Reset current timer"
+        checked={settings.resetTimerOnChange}
+        describedBy="reset-hint"
+        onChange={(resetTimerOnChange) =>
+          timer.saveSettings({ ...settings, resetTimerOnChange })
+        }
+      />
+      <p className="app__hint" id="reset-hint">
+        Apply a changed duration to the countdown that is already running.
+      </p>
 
       <DurationPicker
         legend="Break duration"
@@ -72,6 +90,7 @@ export function SettingsPage() {
         unitSeconds={1}
         unitSuffix="s"
         unitLabel="seconds"
+        customPrefill={CUSTOM_PREFILL.breakDurationSeconds}
         valueSeconds={settings.breakDurationSeconds}
         validate={validateBreakDurationSeconds}
         onChange={(breakDurationSeconds) =>
@@ -79,9 +98,18 @@ export function SettingsPage() {
         }
       />
 
+      <ThemePicker
+        fontChoice={settings.fontChoice}
+        backgroundColor={settings.breakBackgroundColor}
+        onFontChange={(fontChoice) => timer.saveSettings({ ...settings, fontChoice })}
+        onBackgroundChange={(breakBackgroundColor) =>
+          timer.saveSettings({ ...settings, breakBackgroundColor })
+        }
+      />
+
       <Toggle
         label="Break reminders"
-        checked={remindersOn}
+        checked={settings.enabled}
         describedBy="reminders-hint"
         onChange={timer.setEnabled}
       />

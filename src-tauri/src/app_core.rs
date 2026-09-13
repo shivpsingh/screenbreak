@@ -12,6 +12,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 use crate::monitors::MonitorTarget;
+use crate::quotes;
 use crate::settings::{self, Settings};
 use crate::timer::{Millis, Timer, TimerEffect, TimerSnapshot};
 use crate::{tray, windows};
@@ -48,6 +49,11 @@ pub struct AppCore {
     /// Which display(s) breaks appear on. Fixed to `Primary` in the MVP; the
     /// field exists so multi-monitor modes need no plumbing changes.
     pub monitor_target: MonitorTarget,
+    /// The quote shown by the break currently on screen.
+    ///
+    /// Chosen once when the break starts and held here rather than re-picked
+    /// per tick, so the text does not change while the user is reading it.
+    pub active_quote: Option<String>,
     config_dir: PathBuf,
     /// True when no settings file existed at launch. Used to show the
     /// first-run welcome view; the absence of the file is the signal, so no
@@ -66,6 +72,7 @@ impl AppCore {
             timer: Timer::new(settings.interval_seconds, settings.break_duration_seconds),
             settings,
             monitor_target: MonitorTarget::Primary,
+            active_quote: None,
             config_dir,
             is_first_run,
             last_rendered_state: None,
@@ -126,7 +133,12 @@ pub fn snapshot<R: Runtime>(app: &AppHandle<R>) -> TimerSnapshot {
 }
 
 pub fn settings_of<R: Runtime>(app: &AppHandle<R>) -> Settings {
-    with_core(app, |core| core.settings)
+    with_core(app, |core| core.settings.clone())
+}
+
+/// The quote to show on the break that is currently active, if any.
+pub fn active_quote<R: Runtime>(app: &AppHandle<R>) -> Option<String> {
+    with_core(app, |core| core.active_quote.clone())
 }
 
 pub fn is_first_run<R: Runtime>(app: &AppHandle<R>) -> bool {
@@ -142,11 +154,21 @@ pub fn update_settings<R: Runtime>(
     next: Settings,
 ) -> Result<Settings, String> {
     next.validate()?;
+    let now = now_millis();
 
     let persist_result = with_core(app, |core| {
-        core.settings = next;
+        // Only a changed *duration* may restart the countdown. Editing the
+        // font or the background colour must never disturb a timer in flight.
+        let durations_changed = next.durations_differ_from(&core.settings);
+
+        core.settings = next.clone();
         core.timer
             .set_durations(next.interval_seconds, next.break_duration_seconds);
+
+        if should_restart_countdown(&next, durations_changed, core.timer.state()) {
+            core.timer.start(now);
+        }
+
         core.persist()
     });
 
@@ -185,6 +207,13 @@ fn refresh_tray<R: Runtime>(app: &AppHandle<R>, state: crate::timer::TimerState)
 /// has already advanced, so the app recovers on the next interval rather than
 /// getting wedged.
 fn perform<R: Runtime>(app: &AppHandle<R>, effect: TimerEffect) {
+    // Settled before the window work is dispatched, so the break webview
+    // always finds its quote already in place when it asks for one.
+    match effect {
+        TimerEffect::ShowBreak => prepare_quote(app),
+        TimerEffect::HideBreak => with_core(app, |core| core.active_quote = None),
+    }
+
     let app = app.clone();
     let dispatch = app.clone().run_on_main_thread(move || match effect {
         TimerEffect::ShowBreak => {
@@ -200,6 +229,50 @@ fn perform<R: Runtime>(app: &AppHandle<R>, effect: TimerEffect) {
     }
 }
 
+/// Whether a settings change should restart the countdown that is running.
+///
+/// All three conditions matter:
+///   - the user opted in via "Reset current timer";
+///   - a *duration* actually changed, so re-picking a font or colour never
+///     disturbs a countdown in flight;
+///   - the timer is `RUNNING`. An active break keeps its own end time, and
+///     `PAUSED` / `STOPPED` already begin a fresh interval when they resume.
+fn should_restart_countdown(
+    next: &Settings,
+    durations_changed: bool,
+    state: crate::timer::TimerState,
+) -> bool {
+    next.reset_timer_on_change
+        && durations_changed
+        && state == crate::timer::TimerState::Running
+}
+
+/// Re-reads `quotes.json` and picks the quote for a break that is starting.
+///
+/// Reading per break rather than caching at startup is what lets the user edit
+/// the file and see the change on the very next break, with no restart.
+///
+/// The file read happens between two short borrows rather than inside one, so
+/// no filesystem call is ever made while the core is locked — the same rule
+/// this module applies to window calls.
+fn prepare_quote<R: Runtime>(app: &AppHandle<R>) {
+    let config_dir = with_core(app, |core| core.config_dir.clone());
+    let available = quotes::load(&config_dir);
+    let chosen = quotes::pick(&available, quote_seed()).map(str::to_string);
+    with_core(app, |core| core.active_quote = chosen);
+}
+
+/// A throwaway seed for quote selection.
+///
+/// Sub-second noise from the clock is plenty for picking one of a handful of
+/// quotes, and avoids taking on a random-number dependency for it.
+fn quote_seed() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| u64::from(d.subsec_nanos()))
+        .unwrap_or(0)
+}
+
 /// Starts the deadline checker.
 ///
 /// This single thread is the entire scheduling mechanism. It only ever asks
@@ -212,4 +285,85 @@ pub fn spawn_ticker<R: Runtime>(app: &AppHandle<R>) {
         let now = now_millis();
         mutate(&app, |core| core.timer.tick(now));
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::timer::TimerState;
+
+    fn opted_in() -> Settings {
+        Settings {
+            reset_timer_on_change: true,
+            ..Settings::default()
+        }
+    }
+
+    fn opted_out() -> Settings {
+        Settings {
+            reset_timer_on_change: false,
+            ..Settings::default()
+        }
+    }
+
+    #[test]
+    fn a_changed_duration_restarts_a_running_countdown_when_opted_in() {
+        assert!(should_restart_countdown(
+            &opted_in(),
+            true,
+            TimerState::Running
+        ));
+    }
+
+    #[test]
+    fn nothing_restarts_when_the_toggle_is_off() {
+        for state in [
+            TimerState::Running,
+            TimerState::Paused,
+            TimerState::Stopped,
+            TimerState::BreakActive,
+        ] {
+            assert!(
+                !should_restart_countdown(&opted_out(), true, state),
+                "{state:?} restarted despite the toggle being off"
+            );
+        }
+    }
+
+    #[test]
+    fn changing_only_the_theme_never_restarts_the_countdown() {
+        // `durations_changed` is false when just the font or colour moved.
+        assert!(!should_restart_countdown(
+            &opted_in(),
+            false,
+            TimerState::Running
+        ));
+    }
+
+    #[test]
+    fn an_active_break_is_never_cut_short_by_a_settings_change() {
+        assert!(!should_restart_countdown(
+            &opted_in(),
+            true,
+            TimerState::BreakActive
+        ));
+    }
+
+    #[test]
+    fn paused_and_stopped_timers_are_left_alone() {
+        // Both already begin a fresh interval of their own accord.
+        for state in [TimerState::Paused, TimerState::Stopped] {
+            assert!(
+                !should_restart_countdown(&opted_in(), true, state),
+                "{state:?} should not be restarted"
+            );
+        }
+    }
+
+    #[test]
+    fn the_quote_seed_stays_within_the_nanosecond_range() {
+        // Feeding `pick` something outside 0..1e9 would still be safe, but a
+        // seed derived from sub-second noise is what the docs promise.
+        assert!(quote_seed() < 1_000_000_000);
+    }
 }

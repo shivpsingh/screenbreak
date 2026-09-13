@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 import type { Settings } from "../types/settings";
-import type { Bootstrap, TimerSnapshot } from "../types/timer";
+import type { Bootstrap, BreakView, TimerSnapshot } from "../types/timer";
 
 /**
  * The whole IPC surface, in one place.
@@ -17,6 +17,7 @@ export const SNAPSHOT_EVENT = "timer://snapshot";
 export const api = {
   getBootstrap: () => invoke<Bootstrap>("get_bootstrap"),
   getSnapshot: () => invoke<TimerSnapshot>("get_snapshot"),
+  getBreakView: () => invoke<BreakView>("get_break_view"),
   updateSettings: (settings: Settings) => invoke<Settings>("update_settings", { settings }),
   setEnabled: (enabled: boolean) => invoke<TimerSnapshot>("set_enabled", { enabled }),
   start: () => invoke<TimerSnapshot>("timer_start"),

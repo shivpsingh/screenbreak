@@ -33,12 +33,66 @@ pub const MAX_BREAK_DURATION_SECONDS: u32 = 60 * 60;
 
 pub const SETTINGS_FILE_NAME: &str = "settings.json";
 
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
+/// Whether editing a duration restarts the running countdown immediately.
+///
+/// Defaults on, so a changed interval takes effect straight away. With it off,
+/// the pending deadline is left alone and the new value applies from the next
+/// interval.
+pub const DEFAULT_RESET_TIMER_ON_CHANGE: bool = true;
+
+/// The break screen's background. Text colour is derived from it at render
+/// time, so any value stays readable.
+pub const DEFAULT_BREAK_BACKGROUND_COLOR: &str = "#101014";
+
+/// Font choices offered for the app.
+///
+/// A closed set rather than a free-text family name: every option is either a
+/// system stack or bundled with the app, so none of them can silently fail to
+/// render.
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum FontChoice {
+    /// The platform UI font.
+    System,
+    /// Bundled with the app; not assumed to be installed.
+    #[default]
+    UbuntuMono,
+    Serif,
+    /// The platform's default monospace font.
+    Monospace,
+}
+
+impl FontChoice {
+    fn from_str(raw: &str) -> Option<Self> {
+        match raw {
+            "system" => Some(Self::System),
+            "ubuntuMono" => Some(Self::UbuntuMono),
+            "serif" => Some(Self::Serif),
+            "monospace" => Some(Self::Monospace),
+            _ => None,
+        }
+    }
+}
+
+/// Whether `raw` is a `#rrggbb` colour.
+///
+/// Only the six-digit form is accepted. Shorthand and alpha variants would each
+/// need their own normalisation, and the colour input always emits six digits.
+pub fn is_valid_hex_color(raw: &str) -> bool {
+    raw.len() == 7
+        && raw.starts_with('#')
+        && raw[1..].chars().all(|c| c.is_ascii_hexdigit())
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub enabled: bool,
     pub interval_seconds: u32,
     pub break_duration_seconds: u32,
+    pub reset_timer_on_change: bool,
+    pub font_choice: FontChoice,
+    pub break_background_color: String,
 }
 
 impl Default for Settings {
@@ -47,6 +101,9 @@ impl Default for Settings {
             enabled: DEFAULT_ENABLED,
             interval_seconds: DEFAULT_INTERVAL_SECONDS,
             break_duration_seconds: DEFAULT_BREAK_DURATION_SECONDS,
+            reset_timer_on_change: DEFAULT_RESET_TIMER_ON_CHANGE,
+            font_choice: FontChoice::default(),
+            break_background_color: DEFAULT_BREAK_BACKGROUND_COLOR.to_string(),
         }
     }
 }
@@ -70,7 +127,22 @@ impl Settings {
                 self.break_duration_seconds
             ));
         }
+        if !is_valid_hex_color(&self.break_background_color) {
+            return Err(format!(
+                "break background colour must be #rrggbb, got {}",
+                self.break_background_color
+            ));
+        }
         Ok(())
+    }
+
+    /// Whether a settings change should restart the running countdown.
+    ///
+    /// Only a changed duration counts. Editing the font or the background
+    /// colour must never disturb a countdown that is already in flight.
+    pub fn durations_differ_from(&self, previous: &Settings) -> bool {
+        self.interval_seconds != previous.interval_seconds
+            || self.break_duration_seconds != previous.break_duration_seconds
     }
 }
 
@@ -99,11 +171,15 @@ pub fn deserialize_lenient(raw: &str) -> Settings {
             .unwrap_or(fallback)
     };
 
-    Settings {
-        enabled: object
-            .get("enabled")
+    let boolean = |key: &str, fallback: bool| -> bool {
+        object
+            .get(key)
             .and_then(serde_json::Value::as_bool)
-            .unwrap_or(defaults.enabled),
+            .unwrap_or(fallback)
+    };
+
+    Settings {
+        enabled: boolean("enabled", defaults.enabled),
         interval_seconds: bounded(
             "intervalSeconds",
             MIN_INTERVAL_SECONDS,
@@ -116,6 +192,21 @@ pub fn deserialize_lenient(raw: &str) -> Settings {
             MAX_BREAK_DURATION_SECONDS,
             defaults.break_duration_seconds,
         ),
+        reset_timer_on_change: boolean(
+            "resetTimerOnChange",
+            defaults.reset_timer_on_change,
+        ),
+        font_choice: object
+            .get("fontChoice")
+            .and_then(serde_json::Value::as_str)
+            .and_then(FontChoice::from_str)
+            .unwrap_or(defaults.font_choice),
+        break_background_color: object
+            .get("breakBackgroundColor")
+            .and_then(serde_json::Value::as_str)
+            .filter(|raw| is_valid_hex_color(raw))
+            .map(|raw| raw.to_ascii_lowercase())
+            .unwrap_or(defaults.break_background_color),
     }
 }
 
@@ -164,9 +255,9 @@ mod tests {
         for interval in [15 * 60, 30 * 60, 45 * 60, 60 * 60] {
             for duration in [15, 30, 60, 120] {
                 let s = Settings {
-                    enabled: true,
                     interval_seconds: interval,
                     break_duration_seconds: duration,
+                    ..Settings::default()
                 };
                 assert!(s.validate().is_ok(), "{interval}s / {duration}s rejected");
             }
@@ -176,9 +267,9 @@ mod tests {
     #[test]
     fn reasonable_custom_values_are_accepted() {
         let s = Settings {
-            enabled: true,
             interval_seconds: 23 * 60,
             break_duration_seconds: 47,
+            ..Settings::default()
         };
         assert!(s.validate().is_ok());
     }
@@ -204,9 +295,9 @@ mod tests {
         ];
         for (interval_seconds, break_duration_seconds) in cases {
             let s = Settings {
-                enabled: true,
                 interval_seconds,
                 break_duration_seconds,
+                ..Settings::default()
             };
             assert!(
                 s.validate().is_err(),
@@ -218,16 +309,16 @@ mod tests {
     #[test]
     fn boundary_values_are_accepted() {
         let s = Settings {
-            enabled: true,
             interval_seconds: MIN_INTERVAL_SECONDS,
             break_duration_seconds: MIN_BREAK_DURATION_SECONDS,
+            ..Settings::default()
         };
         assert!(s.validate().is_ok());
 
         let s = Settings {
-            enabled: true,
             interval_seconds: MAX_INTERVAL_SECONDS,
             break_duration_seconds: MAX_BREAK_DURATION_SECONDS,
+            ..Settings::default()
         };
         assert!(s.validate().is_ok());
     }
@@ -235,11 +326,153 @@ mod tests {
     #[test]
     fn very_large_values_are_rejected_rather_than_overflowing() {
         let s = Settings {
-            enabled: true,
             interval_seconds: u32::MAX,
             break_duration_seconds: u32::MAX,
+            ..Settings::default()
         };
         assert!(s.validate().is_err());
+    }
+
+    // -- theme and reset-on-change -----------------------------------------
+
+    #[test]
+    fn the_default_theme_is_ubuntu_mono_on_the_original_dark_background() {
+        let s = Settings::default();
+        assert_eq!(s.font_choice, FontChoice::UbuntuMono);
+        assert_eq!(s.break_background_color, "#101014");
+        assert!(s.reset_timer_on_change, "documented as on by default");
+    }
+
+    #[test]
+    fn hex_colours_are_accepted_in_either_case() {
+        for raw in ["#000000", "#ffffff", "#FFFFFF", "#1a2B3c", "#101014"] {
+            assert!(is_valid_hex_color(raw), "{raw} should be valid");
+        }
+    }
+
+    #[test]
+    fn malformed_colours_are_rejected() {
+        for raw in [
+            "", "#", "101014", "#10101", "#1010144", "#fff", "#gggggg", "red",
+            "rgb(0,0,0)", "#12345g", " #101014",
+        ] {
+            assert!(!is_valid_hex_color(raw), "{raw:?} should be rejected");
+        }
+    }
+
+    #[test]
+    fn a_multi_byte_colour_string_is_rejected_without_panicking() {
+        // A naive byte-slice check could panic on a non-ASCII boundary here.
+        assert!(!is_valid_hex_color("#🙂🙂"));
+        assert!(!is_valid_hex_color("#ééééée"));
+    }
+
+    #[test]
+    fn validation_rejects_a_bad_colour() {
+        let s = Settings {
+            break_background_color: "not a colour".to_string(),
+            ..Settings::default()
+        };
+        let error = s.validate().expect_err("should be rejected");
+        assert!(error.contains("#rrggbb"), "unhelpful message: {error}");
+    }
+
+    #[test]
+    fn only_a_changed_duration_counts_as_a_duration_change() {
+        let base = Settings::default();
+
+        let same_durations_new_theme = Settings {
+            font_choice: FontChoice::Serif,
+            break_background_color: "#ffffff".to_string(),
+            reset_timer_on_change: false,
+            enabled: false,
+            ..base.clone()
+        };
+        assert!(
+            !same_durations_new_theme.durations_differ_from(&base),
+            "changing the theme must not be treated as a duration change"
+        );
+
+        let new_interval = Settings {
+            interval_seconds: 900,
+            ..base.clone()
+        };
+        assert!(new_interval.durations_differ_from(&base));
+
+        let new_duration = Settings {
+            break_duration_seconds: 30,
+            ..base.clone()
+        };
+        assert!(new_duration.durations_differ_from(&base));
+    }
+
+    #[test]
+    fn every_font_choice_survives_a_round_trip() {
+        for choice in [
+            FontChoice::System,
+            FontChoice::UbuntuMono,
+            FontChoice::Serif,
+            FontChoice::Monospace,
+        ] {
+            let original = Settings {
+                font_choice: choice,
+                ..Settings::default()
+            };
+            let raw = serde_json::to_string(&original).unwrap();
+            assert_eq!(deserialize_lenient(&raw).font_choice, choice);
+        }
+    }
+
+    #[test]
+    fn an_unknown_font_name_falls_back_to_the_default() {
+        for raw in [
+            r#"{"fontChoice": "comicSans"}"#,
+            r#"{"fontChoice": "UbuntuMono"}"#, // wrong casing
+            r#"{"fontChoice": 42}"#,
+            r#"{"fontChoice": null}"#,
+        ] {
+            assert_eq!(
+                deserialize_lenient(raw).font_choice,
+                FontChoice::default(),
+                "{raw}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_persisted_colour_is_normalised_to_lowercase() {
+        let s = deserialize_lenient(r##"{"breakBackgroundColor": "#AABBCC"}"##);
+        assert_eq!(s.break_background_color, "#aabbcc");
+    }
+
+    #[test]
+    fn an_invalid_persisted_colour_is_repaired() {
+        for raw in [
+            r#"{"breakBackgroundColor": "chartreuse"}"#,
+            r##"{"breakBackgroundColor": "#fff"}"##,
+            r#"{"breakBackgroundColor": 16}"#,
+        ] {
+            let s = deserialize_lenient(raw);
+            assert_eq!(s.break_background_color, DEFAULT_BREAK_BACKGROUND_COLOR);
+            assert!(s.validate().is_ok(), "recovered settings must be valid");
+        }
+    }
+
+    #[test]
+    fn an_invalid_theme_does_not_discard_valid_durations() {
+        let raw = r#"{
+            "intervalSeconds": 900,
+            "breakDurationSeconds": 30,
+            "fontChoice": "wingdings",
+            "breakBackgroundColor": "octarine",
+            "resetTimerOnChange": "maybe"
+        }"#;
+        let s = deserialize_lenient(raw);
+        assert_eq!(s.interval_seconds, 900);
+        assert_eq!(s.break_duration_seconds, 30);
+        assert_eq!(s.font_choice, FontChoice::default());
+        assert_eq!(s.break_background_color, DEFAULT_BREAK_BACKGROUND_COLOR);
+        assert_eq!(s.reset_timer_on_change, DEFAULT_RESET_TIMER_ON_CHANGE);
     }
 
     // -- lenient loading ----------------------------------------------------
@@ -250,6 +483,7 @@ mod tests {
             enabled: false,
             interval_seconds: 1800,
             break_duration_seconds: 30,
+            ..Settings::default()
         };
         let raw = serde_json::to_string(&original).unwrap();
         assert_eq!(deserialize_lenient(&raw), original);
@@ -332,6 +566,7 @@ mod tests {
             enabled: false,
             interval_seconds: 2700,
             break_duration_seconds: 120,
+            ..Settings::default()
         };
         save(&dir, &written).expect("save should succeed");
         assert_eq!(load(&dir), written);

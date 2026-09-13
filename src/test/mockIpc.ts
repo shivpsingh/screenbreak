@@ -1,5 +1,6 @@
 import { vi } from "vitest";
 
+import { DEFAULT_SETTINGS } from "../types/settings";
 import type { Settings } from "../types/settings";
 import type { Bootstrap, TimerSnapshot } from "../types/timer";
 
@@ -21,6 +22,8 @@ export interface MockBackend {
   setSnapshot: (snapshot: TimerSnapshot) => void;
   /** Makes the next matching command reject with `message`. */
   failCommand: (name: string, message: string) => void;
+  /** Sets the quote `get_break_view` will return, as quotes.json would. */
+  setQuote: (quote: string | null) => void;
 }
 
 export function createMockBackend(
@@ -29,6 +32,7 @@ export function createMockBackend(
   let snapshot = bootstrap.snapshot;
   let settings: Settings = bootstrap.settings;
   const calls: Array<[string, unknown]> = [];
+  let quote: string | null = null;
   const listeners = new Set<(payload: TimerSnapshot) => void>();
   const failures = new Map<string, string>();
 
@@ -51,6 +55,8 @@ export function createMockBackend(
         return { ...bootstrap, settings, snapshot } satisfies Bootstrap;
       case "get_snapshot":
         return snapshot;
+      case "get_break_view":
+        return { quote, settings, snapshot };
       case "update_settings": {
         settings = (args as { settings: Settings }).settings;
         return settings;
@@ -104,11 +110,14 @@ export function createMockBackend(
       snapshot = next;
     },
     failCommand: (name, message) => failures.set(name, message),
+    setQuote: (next) => {
+      quote = next;
+    },
   };
 }
 
 export const defaultBootstrap: Bootstrap = {
-  settings: { enabled: true, intervalSeconds: 3600, breakDurationSeconds: 60 },
+  settings: DEFAULT_SETTINGS,
   snapshot: { state: "RUNNING", nextBreakAt: 0 },
   isFirstRun: false,
 };
