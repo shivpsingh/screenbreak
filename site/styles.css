@@ -752,12 +752,20 @@ pre {
   margin-bottom: 28px;
 }
 
-.get__build pre {
-  margin-top: 0;
+/*
+ * One gap rule for the whole column rather than per-child margins. The
+ * `margin-top: 0` that used to live on the <pre> was correct when the code
+ * block was the first thing here, but once the notice moved above it the two
+ * cards ended up flush against each other.
+ */
+.get__build {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
-.get__build .field__hint {
-  margin-top: 12px;
+.get__build > * {
+  margin: 0;
 }
 
 /* Spans both columns as a closing footnote, set small: information, not a
