@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Screen Break — a fullscreen nudge to rest your eyes</title>
+    <meta
+      name="description"
+      content="A small local-first desktop app that interrupts you now and then with a fullscreen reminder to look away from your screen. macOS, Windows and Linux. No accounts, no telemetry, no network."
+    />
+    <meta name="theme-color" content="#101014" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Screen Break" />
+    <meta
+      property="og:description"
+      content="A fullscreen nudge to look away from your screen and focus on something in the distance. Local-first, on macOS, Windows and Linux."
+    />
+    <meta property="og:image" content="images/break.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="icon" href="logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <!--
+      The break overlay. Inert and hidden until the hero countdown fires it,
+      exactly once per visit. Mirrors the app's real break screen.
+    -->
+    <div
+      class="break break--overlay"
+      id="overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Break screen demonstration"
+      hidden
+    >
+      <p class="break__heading" id="overlay-heading">Take a break</p>
+      <p class="break__message">
+        Look away from your screen and focus on something in the distance.
+      </p>
+      <p class="break__countdown" id="overlay-countdown">00:10</p>
+      <p class="break__escape">
+        Press Esc to end this break early
+        <span class="break__demo-note">— this is a demo, nothing is installed</span>
+      </p>
+    </div>
+
+    <header class="hero" id="hero">
+      <div class="hero__inner">
+        <div class="brand">
+          <img class="brand__mark" src="logo.svg" alt="" width="34" height="34" />
+          <span class="brand__name">Screen Break</span>
+        </div>
+
+        <h1 class="hero__title">Look away.<br />Your eyes will thank you.</h1>
+
+        <p class="hero__pitch">
+          A small desktop app that interrupts you every so often with a
+          fullscreen reminder to rest your eyes on something further away than
+          your monitor. That is the whole idea.
+        </p>
+
+        <!--
+          Deliberately visible: the takeover is coming, and the visitor can see
+          it coming. A surprise fullscreen hijack would be indefensible.
+        -->
+        <div class="ticker" id="ticker">
+          <span class="ticker__label" id="ticker-label">Demo break in</span>
+          <span class="ticker__value" id="ticker-value">00:08</span>
+        </div>
+
+        <div class="hero__actions">
+          <button type="button" class="button button--primary" id="fire-now">
+            Watch it happen
+          </button>
+          <a class="button" href="#get-it">Get it</a>
+        </div>
+
+        <p class="hero__meta">
+          macOS · Windows · Linux &nbsp;•&nbsp; Local-first &nbsp;•&nbsp; No
+          accounts, no telemetry
+        </p>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- ------------------------------------------------ make it yours -->
+      <section class="section" id="yours">
+        <div class="section__head">
+          <h2>Make it yours</h2>
+          <p>
+            Pick any background colour and the text colour is worked out for
+            you, so the break screen is always readable. Add your own lines and
+            they show up instead of the default heading. Both controls below
+            drive the real preview.
+          </p>
+        </div>
+
+        <div class="playground">
+          <div class="playground__controls">
+            <div class="field">
+              <label class="field__label" for="colour">Break background</label>
+              <div class="field__row">
+                <input type="color" id="colour" value="#101014" />
+                <output class="field__hint" id="contrast">contrast 17.3:1</output>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field__label" for="quote">Your own line</label>
+              <input
+                type="text"
+                id="quote"
+                maxlength="120"
+                autocomplete="off"
+                placeholder="Your eyes are muscles. Let them stretch."
+              />
+              <p class="field__hint">
+                Leave it empty for the default “Take a break”.
+              </p>
+            </div>
+
+            <div class="swatches" role="group" aria-label="Example colours">
+              <button type="button" class="swatch" data-colour="#101014" style="--s: #101014" aria-label="Near black"></button>
+              <button type="button" class="swatch" data-colour="#0f1f2e" style="--s: #0f1f2e" aria-label="Deep blue"></button>
+              <button type="button" class="swatch" data-colour="#1d2b1f" style="--s: #1d2b1f" aria-label="Forest"></button>
+              <button type="button" class="swatch" data-colour="#f5f0e0" style="--s: #f5f0e0" aria-label="Warm paper"></button>
+              <button type="button" class="swatch" data-colour="#e8eefc" style="--s: #e8eefc" aria-label="Pale blue"></button>
+            </div>
+          </div>
+
+          <!--
+            The same markup and CSS as the overlay above, rendered inline. This
+            doubles as the static fallback for anyone with reduced motion
+            enabled, who never gets the takeover.
+          -->
+          <div class="preview">
+            <div class="break break--inline" id="preview">
+              <p class="break__heading" id="preview-heading">Take a break</p>
+              <p class="break__message">
+                Look away from your screen and focus on something in the
+                distance.
+              </p>
+              <p class="break__countdown">00:42</p>
+              <p class="break__escape">Press Esc to end this break early</p>
+            </div>
+            <p class="preview__caption">Live preview</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------- how it works -->
+      <section class="section section--alt" id="how">
+        <div class="section__head">
+          <h2>How it works</h2>
+          <p>Three steps, then it gets out of your way.</p>
+        </div>
+
+        <ol class="flow">
+          <li class="flow__step">
+            <span class="flow__num">1</span>
+            <h3>Work normally</h3>
+            <p>
+              It sits in your menu bar or system tray and counts down. Closing
+              the settings window does not quit it.
+            </p>
+          </li>
+          <li class="flow__step">
+            <span class="flow__num">2</span>
+            <h3>Take the break</h3>
+            <p>
+              Your screen is covered for as long as you chose. There is no Skip
+              button — the point is the habit.
+            </p>
+          </li>
+          <li class="flow__step">
+            <span class="flow__num">3</span>
+            <h3>Back to it</h3>
+            <p>
+              The break disappears on its own and the next interval starts. No
+              streaks, no score, nothing to keep up with.
+            </p>
+          </li>
+        </ol>
+
+        <div class="cards">
+          <article class="card">
+            <h3>Esc is the way out</h3>
+            <p>
+              No Skip button, but never a trap. Esc ends a break immediately and
+              starts a fresh interval, so it will not spring straight back.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Pausing does not owe you</h3>
+            <p>
+              Resume always begins a whole new interval. Time spent paused is
+              not counted, so you never get a break the second you come back.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Sleep through it and nothing piles up</h3>
+            <p>
+              Close the lid past several scheduled breaks and you get exactly
+              one when you wake, not a backlog.
+            </p>
+          </article>
+          <article class="card">
+            <h3>A corrupt settings file will not stop it</h3>
+            <p>
+              Settings are plain JSON you can edit. Break one field and only
+              that field resets — the app repairs it rather than starting over.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <!-- -------------------------------------------------- screenshots -->
+      <section class="section" id="shots">
+        <div class="section__head">
+          <h2>What it looks like</h2>
+          <p>Small, quiet, and over in a minute.</p>
+        </div>
+
+        <div class="shots">
+          <figure class="shot shot--wide">
+            <img
+              src="images/break.png"
+              alt="The fullscreen break screen: the words TAKE A BREAK above the instruction to look away and focus on something in the distance, with a large countdown reading 00:57."
+              loading="lazy"
+              width="1512"
+              height="957"
+            />
+            <figcaption>The break, on the default dark background.</figcaption>
+          </figure>
+          <figure class="shot shot--wide">
+            <img
+              src="images/break-quote.png"
+              alt="The break screen showing the quote 'Your eyes are muscles. Let them stretch.' in place of the default heading."
+              loading="lazy"
+              width="1512"
+              height="957"
+            />
+            <figcaption>With one of your own lines instead.</figcaption>
+          </figure>
+          <figure class="shot">
+            <img
+              src="images/settings.png"
+              alt="The settings window: interval presets, a reset-current-timer checkbox, duration presets, an appearance section with a font dropdown and colour swatch, and a countdown above Pause and Start Break Now."
+              loading="lazy"
+              width="520"
+              height="771"
+            />
+            <figcaption>Everything there is to configure.</figcaption>
+          </figure>
+          <figure class="shot">
+            <img
+              src="images/first-run.png"
+              alt="The first-run screen: the app name, the line 'Take regular breaks to rest your eyes', the schedule 'Every 1 hour for 1 minute', and a single Start button."
+              loading="lazy"
+              width="520"
+              height="771"
+            />
+            <figcaption>First launch. One button, then it begins.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------- local first -->
+      <section class="section section--alt" id="local">
+        <div class="section__head">
+          <h2>It stays on your machine</h2>
+          <p>
+            Not a promise in a privacy policy — there is no code that could send
+            anything anywhere.
+          </p>
+        </div>
+
+        <div class="proof">
+          <ul class="proof__list">
+            <li>No account, no sign-in, nothing to create.</li>
+            <li>No telemetry, no analytics, no crash reporting.</li>
+            <li>No network requests at all, not even a version check.</li>
+            <li>No database. Settings are one small JSON file you own.</li>
+          </ul>
+
+          <div class="proof__code">
+            <p class="proof__code-label">
+              The app's entire permission set, from
+              <code>capabilities/default.json</code>:
+            </p>
+            <pre><code>"permissions": [
+  "core:event:allow-listen",
+  "core:event:allow-unlisten"
+]</code></pre>
+            <p class="proof__note">
+              That is it. No filesystem access for the interface, no shell, no
+              HTTP, and not a single plugin.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ------------------------------------------------------- get it -->
+      <section class="section" id="get-it">
+        <div class="section__head">
+          <h2>Get it</h2>
+          <p class="notice">
+            <strong>There are no packaged releases yet.</strong> For now you
+            build it yourself — it takes one command once the toolchain is set
+            up.
+          </p>
+        </div>
+
+        <div class="get">
+          <div class="get__build">
+            <pre><code>git clone https://github.com/shivpsingh/screenbreak.git
+cd screenbreak
+pnpm install
+pnpm tauri build</code></pre>
+            <p class="field__hint">
+              Needs Node 18+ and a Rust toolchain, plus a few system packages on
+              Linux. The
+              <a
+                href="https://github.com/shivpsingh/screenbreak/blob/main/docs/development.md"
+                >development guide</a
+              >
+              has the details.
+            </p>
+          </div>
+
+          <ul class="platforms">
+            <li class="platform">
+              <span class="platform__name">macOS</span>
+              <span class="platform__note">.app and .dmg · unsigned for now</span>
+            </li>
+            <li class="platform">
+              <span class="platform__name">Windows</span>
+              <span class="platform__note">.msi and .exe · unsigned for now</span>
+            </li>
+            <li class="platform">
+              <span class="platform__name">Linux</span>
+              <span class="platform__note">.deb, .rpm, AppImage</span>
+            </li>
+          </ul>
+        </div>
+
+        <p class="field__hint">
+          Because the builds are unsigned, macOS and Windows will warn you the
+          first time. On macOS, right-click the app and choose Open. Removing
+          those warnings needs paid certificates —
+          <a
+            href="https://github.com/shivpsingh/screenbreak/blob/main/docs/distribution.md"
+            >the distribution notes</a
+          >
+          explain what that involves.
+        </p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer__inner">
+        <div class="brand brand--small">
+          <img class="brand__mark" src="logo.svg" alt="" width="24" height="24" />
+          <span class="brand__name">Screen Break</span>
+        </div>
+
+        <nav class="footer__links" aria-label="Project links">
+          <a href="https://github.com/shivpsingh/screenbreak">Source</a>
+          <a href="https://github.com/shivpsingh/screenbreak/blob/main/README.md">README</a>
+          <a href="https://github.com/shivpsingh/screenbreak/blob/main/docs/architecture.md">Architecture</a>
+          <a href="https://github.com/shivpsingh/screenbreak/blob/main/docs/development.md">Development</a>
+          <a href="https://github.com/shivpsingh/screenbreak/blob/main/docs/distribution.md">Distribution</a>
+        </nav>
+
+        <p class="footer__note">
+          Built with <a href="https://tauri.app">Tauri&nbsp;2</a>, React and
+          Rust. <strong>No licence has been chosen yet</strong>, so the source is
+          not yet reusable. Ubuntu&nbsp;Mono is bundled under the Ubuntu Font
+          Licence&nbsp;1.0.
+        </p>
+      </div>
+    </footer>
+
+    <script src="demo.js"></script>
+  </body>
+</html>

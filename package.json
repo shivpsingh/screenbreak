@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
     "test:all": "pnpm test && pnpm test:rust",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "site": "mkdir -p site/images && cp docs/images/*.png site/images/ && python3 -m http.server 8765 --directory site"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

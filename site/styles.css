@@ -1,0 +1,735 @@
+/*
+ * Screen Break — landing page.
+ *
+ * Hand-written, no build step and no dependencies, matching the app's own
+ * "no unnecessary dependencies" rule.
+ *
+ * The `.break__*` rules below are deliberately kept in step with the real
+ * break screen in `src/styles.css`, and are driven by the same
+ * --break-bg / --break-fg / --break-fg-muted custom properties, so the demo
+ * on this page is visually the actual product rather than an impression of it.
+ */
+
+/*
+ * Shipped as TTF rather than WOFF2: the font is already vendored for the app in
+ * that format, and no subsetting or conversion tooling was available here.
+ * `swap` means it never blocks first paint, and TTF compresses well over the
+ * wire, so the practical cost is small.
+ */
+@font-face {
+  font-family: "Ubuntu Mono";
+  src: url("fonts/UbuntuMono-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --bg: #0c0c10;
+  --bg-alt: #121218;
+  --surface: #17171e;
+  --border: #2a2a33;
+  --border-strong: #3d3d49;
+  --text: #f2f2f4;
+  --text-muted: #a2a2ae;
+  --accent: #8da2f0;
+  --accent-ink: #14141a;
+
+  --radius: 10px;
+  --measure: 62ch;
+  --page: 1120px;
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-display: "Ubuntu Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Defaults for the break demo; demo.js overwrites these live. */
+  --break-bg: #101014;
+  --break-fg: #f4f4f6;
+  --break-fg-muted: #a8a8b2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+code {
+  font-family: var(--font-display);
+  font-size: 0.92em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 10px 16px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 0 0 var(--radius) 0;
+}
+
+.skip:focus {
+  left: 0;
+}
+
+/* ------------------------------------------------------------------ brand */
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--text);
+}
+
+.brand__mark {
+  display: block;
+}
+
+.brand__name {
+  font-family: var(--font-display);
+  font-size: 19px;
+  letter-spacing: 0.01em;
+}
+
+.brand--small .brand__name {
+  font-size: 16px;
+}
+
+/* ------------------------------------------------------------------- hero */
+
+.hero {
+  display: flex;
+  align-items: center;
+  min-height: 92vh;
+  padding: 64px 24px;
+  /* A faint focal glow, echoing "something in the distance". */
+  background:
+    radial-gradient(closest-side at 72% 32%, rgba(141, 162, 240, 0.1), transparent),
+    var(--bg);
+}
+
+.hero__inner {
+  width: 100%;
+  max-width: var(--page);
+  margin: 0 auto;
+}
+
+.hero__title {
+  margin: 32px 0 0;
+  font-size: clamp(40px, 7vw, 78px);
+}
+
+.hero__pitch {
+  max-width: 52ch;
+  margin: 22px 0 0;
+  color: var(--text-muted);
+  font-size: clamp(17px, 1.7vw, 20px);
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.hero__meta {
+  margin-top: 28px;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 14px;
+}
+
+/* The countdown that telegraphs the takeover. */
+.ticker {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 34px;
+  padding: 12px 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: rgba(23, 23, 30, 0.7);
+}
+
+.ticker__label {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.ticker__value {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ticker[data-state="done"] .ticker__value {
+  color: var(--text-muted);
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.button:hover {
+  border-color: var(--text-muted);
+  background: var(--surface);
+}
+
+.button--primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.button--primary:hover {
+  background: #a3b4f4;
+  border-color: #a3b4f4;
+}
+
+/* --------------------------------------------------------------- sections */
+
+.section {
+  padding: 96px 24px;
+}
+
+.section--alt {
+  background: var(--bg-alt);
+  border-block: 1px solid var(--border);
+}
+
+.section__head {
+  max-width: var(--page);
+  margin: 0 auto 44px;
+}
+
+.section__head h2 {
+  font-size: clamp(28px, 3.6vw, 42px);
+}
+
+.section__head > p {
+  max-width: var(--measure);
+  margin-top: 14px;
+  color: var(--text-muted);
+}
+
+.notice {
+  padding: 14px 18px;
+  border: 1px solid var(--border-strong);
+  border-left-width: 3px;
+  border-left-color: var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+/* ------------------------------------------------------------ playground */
+
+.playground {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(0, 1.45fr);
+  gap: 40px;
+  align-items: start;
+  max-width: var(--page);
+  margin: 0 auto;
+}
+
+.playground__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field__label {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.field__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.field__hint {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+#colour {
+  width: 62px;
+  height: 40px;
+  padding: 3px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+#quote {
+  padding: 11px 13px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+
+#contrast {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.swatch {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--s);
+  cursor: pointer;
+}
+
+.swatch:hover {
+  border-color: var(--text-muted);
+}
+
+.preview__caption {
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ------------------------------------------------------- the break screen */
+/* Kept in step with the `.break*` rules in src/styles.css. */
+
+.break {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: var(--break-bg);
+  color: var(--break-fg);
+  font-family: var(--font-display);
+}
+
+/*
+ * `display: flex` above outranks the user-agent's `[hidden] { display: none }`,
+ * which is a single attribute selector. Without this the overlay ignores its
+ * own `hidden` attribute and covers the page from first paint. Scoped rather
+ * than `!important` so specificity does the work.
+ */
+.break[hidden] {
+  display: none;
+}
+
+.break--inline {
+  gap: 18px;
+  min-height: 400px;
+  padding: 44px 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.break--overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  gap: 28px;
+  padding: 48px;
+  animation: fade-in 320ms ease-out;
+}
+
+.break__heading {
+  font-size: clamp(26px, 4.4vw, 58px);
+  font-weight: 300;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* A typed line is a sentence, so it drops the heading's tracking and caps. */
+.break__heading--quote {
+  max-width: 28ch;
+  font-size: clamp(21px, 2.9vw, 40px);
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.break__message {
+  max-width: 22ch;
+  color: var(--break-fg-muted);
+  font-size: clamp(15px, 1.7vw, 26px);
+  font-weight: 300;
+  line-height: 1.45;
+}
+
+.break__countdown {
+  font-size: clamp(44px, 8vw, 128px);
+  font-weight: 200;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.break__escape {
+  color: var(--break-fg-muted);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.break--overlay .break__escape {
+  position: fixed;
+  bottom: 28px;
+}
+
+.break__demo-note {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ------------------------------------------------------------------- flow */
+
+.flow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 24px;
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.flow__step h3 {
+  margin: 14px 0 8px;
+  font-size: 21px;
+}
+
+.flow__step p {
+  color: var(--text-muted);
+  font-size: 16px;
+}
+
+.flow__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 15px;
+}
+
+/* ------------------------------------------------------------------ cards */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(258px, 1fr));
+  gap: 20px;
+  max-width: var(--page);
+  margin: 56px auto 0;
+}
+
+.card {
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.card h3 {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.card p {
+  color: var(--text-muted);
+  font-size: 15.5px;
+}
+
+/* ------------------------------------------------------------ screenshots */
+
+.shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 28px;
+  max-width: var(--page);
+  margin: 0 auto;
+}
+
+.shot {
+  margin: 0;
+}
+
+.shot--wide {
+  grid-column: span 2;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.shot figcaption {
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: 14.5px;
+}
+
+/* ------------------------------------------------------------------ proof */
+
+.proof {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 36px;
+  max-width: var(--page);
+  margin: 0 auto;
+}
+
+.proof__list {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text-muted);
+}
+
+.proof__list li {
+  margin-bottom: 12px;
+}
+
+.proof__code-label,
+.proof__note {
+  color: var(--text-muted);
+  font-size: 14.5px;
+}
+
+.proof__note {
+  margin-top: 12px;
+}
+
+pre {
+  margin: 14px 0 0;
+  padding: 18px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #0a0a0e;
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+/* ----------------------------------------------------------------- get it */
+
+.get {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(220px, 1fr);
+  gap: 36px;
+  align-items: start;
+  max-width: var(--page);
+  margin: 0 auto 24px;
+}
+
+.get__build pre {
+  margin-top: 0;
+}
+
+.get__build .field__hint {
+  margin-top: 12px;
+}
+
+.platforms {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.platform {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.platform__name {
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+
+.platform__note {
+  color: var(--text-muted);
+  font-size: 13.5px;
+}
+
+/* ----------------------------------------------------------------- footer */
+
+.footer {
+  padding: 56px 24px 72px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+
+.footer__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: var(--page);
+  margin: 0 auto;
+}
+
+.footer__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  font-size: 15px;
+}
+
+.footer__note {
+  max-width: var(--measure);
+  color: var(--text-muted);
+  font-size: 14.5px;
+}
+
+/* ------------------------------------------------------------ responsive */
+
+@media (max-width: 900px) {
+  .playground,
+  .get {
+    grid-template-columns: 1fr;
+  }
+
+  .shot--wide {
+    grid-column: auto;
+  }
+
+  .section {
+    padding: 72px 20px;
+  }
+
+  .hero {
+    min-height: auto;
+    padding: 56px 20px 72px;
+  }
+}
+
+/* Honour a reduced-motion preference. demo.js additionally skips the takeover
+   entirely, leaving the inline preview as the static equivalent. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .card,
+  .platform,
+  .break--inline,
+  .shot img,
+  pre {
+    border-color: var(--text-muted);
+  }
+}

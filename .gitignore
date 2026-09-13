@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Generated: copied from docs/images by `pnpm site` and by the Pages workflow.
+site/images/

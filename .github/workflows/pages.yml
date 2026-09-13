@@ -1,0 +1,78 @@
+name: Pages
+
+# Deploys the landing page in site/ to GitHub Pages.
+#
+# Requires Pages to be set to the "GitHub Actions" source once, in
+# Settings → Pages. The workflow cannot configure that itself.
+
+on:
+  push:
+    branches: [main]
+    # Only rebuild when the site or its screenshots actually change.
+    paths:
+      - 'site/**'
+      - 'docs/images/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# A newer commit should supersede an in-flight deploy rather than queue behind
+# it, but never cancel a deploy that is already publishing.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble the site
+        # The screenshots live in docs/ so the README can use them too; copy
+        # them in so the published site has everything at its own root and all
+        # paths stay relative.
+        run: |
+          mkdir -p _site
+          cp -R site/. _site/
+          mkdir -p _site/images
+          cp docs/images/*.png _site/images/
+          # Jekyll would otherwise ignore any path beginning with an underscore.
+          touch _site/.nojekyll
+          echo "Published files:"
+          find _site -type f | sort
+
+      - name: Check every local reference resolves
+        # A dead image or stylesheet path is the easiest way to ship a broken
+        # page, and it is trivial to catch here.
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, sys
+          root = pathlib.Path("_site")
+          html = (root / "index.html").read_text()
+          refs = re.findall(r'(?:href|src)="([^"#]+)"', html)
+          missing = [
+              r for r in refs
+              if not r.startswith(("http", "mailto:", "#", "//"))
+              and not (root / r).exists()
+          ]
+          for r in missing:
+              print(f"MISSING: {r}")
+          sys.exit(1 if missing else 0)
+          PY
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
